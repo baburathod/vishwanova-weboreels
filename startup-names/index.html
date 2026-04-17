@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💡 Startup Name Generator</title>
+<meta name="description" content="Generate creative startup names with logos and domain availability.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;min-height:100vh;background:linear-gradient(180deg,#0a0a1a,#0d1117);color:#fff;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.container{position:relative;z-index:1;max-width:650px;width:90%;text-align:center;padding:2rem}
+h1{font-size:clamp(2rem,7vw,4rem);font-weight:700;background:linear-gradient(135deg,#06b6d4,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+.sub{color:#06b6d444;letter-spacing:3px;font-size:.85rem;margin-bottom:2rem;text-transform:uppercase}
+.industry-select{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1.5rem}
+.ind{padding:.5rem 1rem;border-radius:99px;border:1.5px solid #8b5cf633;background:transparent;color:#a78bfa;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:.85rem;transition:all .3s}
+.ind:hover{border-color:#8b5cf6}
+.ind.active{background:#8b5cf622;border-color:#8b5cf6;color:#fff}
+input{width:100%;padding:1.1rem;border-radius:16px;border:2px solid #06b6d433;background:#111827;color:#fff;font-size:1rem;font-family:'Space Grotesk',sans-serif;outline:none;margin-bottom:1.5rem;transition:all .3s}
+input:focus{border-color:#06b6d4;box-shadow:0 0 25px #06b6d422}
+input::placeholder{color:#555}
+.btn{width:100%;padding:1.1rem;border:none;border-radius:16px;background:linear-gradient(135deg,#06b6d4,#8b5cf6);color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all .3s;text-transform:uppercase;letter-spacing:2px}
+.btn:hover{transform:translateY(-3px);box-shadow:0 8px 30px #8b5cf655}
+.names-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:2rem}
+@media(max-width:500px){.names-grid{grid-template-columns:1fr}}
+.name-card{padding:1.5rem;border-radius:16px;background:#111827;border:1px solid #1e293b;transition:all .3s;cursor:pointer;text-align:center}
+.name-card:hover{border-color:#8b5cf6;transform:translateY(-3px);box-shadow:0 5px 20px #8b5cf633}
+.name-logo{width:60px;height:60px;border-radius:16px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff}
+.name-text{font-size:1.3rem;font-weight:700;color:#e2e8f0;margin-bottom:.3rem}
+.name-domain{font-size:.8rem;color:#06b6d4}
+.name-tagline{font-size:.8rem;color:#666;margin-top:.3rem}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#111827;border:2px solid #8b5cf644;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#8b5cf6;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>Name Forge</h1>
+  <p class="sub">Generate your next startup name</p>
+  <div class="industry-select">
+    <span class="ind active" data-i="tech" onclick="setInd(this)">💻 Tech</span>
+    <span class="ind" data-i="health" onclick="setInd(this)">🏥 Health</span>
+    <span class="ind" data-i="finance" onclick="setInd(this)">💰 Finance</span>
+    <span class="ind" data-i="food" onclick="setInd(this)">🍕 Food</span>
+    <span class="ind" data-i="education" onclick="setInd(this)">📚 Education</span>
+    <span class="ind" data-i="social" onclick="setInd(this)">🤝 Social</span>
+  </div>
+  <input type="text" id="keywords" placeholder="Keywords: e.g. fast, smart, green, cloud..." autofocus>
+  <button class="btn" onclick="generate()">⚡ Generate Names</button>
+  <div class="names-grid" id="grid"></div>
+</div>
+<script>
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+let pts=[];
+for(let i=0;i<40;i++) pts.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*2+1});
+function draw(){
+  ctx.fillStyle='rgba(10,10,26,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>canvas.width)p.vx*=-1;if(p.y<0||p.y>canvas.height)p.vy*=-1;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(139,92,246,0.3)';ctx.fill()});
+  requestAnimationFrame(draw);
+}
+draw();
+
+let industry='tech';
+function setInd(el){document.querySelectorAll('.ind').forEach(i=>i.classList.remove('active'));el.classList.add('active');industry=el.dataset.i}
+
+const prefixes={tech:['Nexa','Verta','Synth','Qubit','Nova','Hexa','Bytex','Nura','Flux','Zen'],health:['Vita','Medi','Heal','Pulse','Cura','Wellr','Sana','Nexo','Thera','Bloom'],finance:['Finna','Vaultex','Coino','Ledgr','Payx','Welta','Fundr','Minto','Capita','Equa'],food:['Bitezy','Chewn','Crumbl','Feast','Nourish','Yummi','Savorr','Gobblr','Freshly','Tastn'],education:['Learnr','Studex','Brainr','Curri','Edux','Skillo','Tutora','Classiq','Mindly','Quizr'],social:['Bondly','Nexus','Tribr','Viber','Linko','Circl','Hubly','Meetly','Wavr','Chatly']};
+const suffixes={tech:['.ai','.io','.dev','.tech','.cloud'],health:['.health','.care','.life','.wellness','.md'],finance:['.money','.capital','.fund','.pay','.cash'],food:['.kitchen','.eats','.food','.bites','.co'],education:['.academy','.learn','.study','.edu','.school'],social:['.social','.community','.club','.network','.co']};
+const taglines={tech:['Redefining the digital frontier','Code meets intelligence','Building tomorrow, today'],health:['Your wellness companion','Health reimagined','Care without limits'],finance:['Money, simplified','Your financial co-pilot','Wealth for everyone'],food:['Taste the difference','Every bite matters','Food, delivered differently'],education:['Learn without limits','Knowledge at your pace','The future of learning'],social:['Connect authentically','Community first','Bringing people closer']};
+const colors=['#06b6d4','#8b5cf6','#ec4899','#f59e0b','#22c55e','#ef4444','#3b82f6','#14b8a6'];
+
+function generate(){
+  const kw=document.getElementById('keywords').value.trim();
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  const pres=prefixes[industry];
+  const sufs=suffixes[industry];
+  const tags=taglines[industry];
+  const used=new Set();
+  for(let i=0;i<6;i++){
+    let name;
+    do{name=pres[Math.floor(Math.random()*pres.length)]}while(used.has(name));
+    used.add(name);
+    if(kw){
+      const kwPart=kw.split(/[,\s]+/)[0];
+      if(Math.random()>.5) name=kwPart.charAt(0).toUpperCase()+kwPart.slice(1,3)+name.slice(2);
+    }
+    const domain=name.toLowerCase()+sufs[Math.floor(Math.random()*sufs.length)];
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    const tag=tags[Math.floor(Math.random()*tags.length)];
+    const card=document.createElement('div');
+    card.className='name-card';
+    card.style.animationDelay=i*.1+'s';
+    card.innerHTML=`<div class="name-logo" style="background:${color}">${name[0]}${name[1]||''}</div><div class="name-text">${name}</div><div class="name-domain">${domain}</div><div class="name-tagline">${tag}</div>`;
+    card.onclick=()=>{navigator.clipboard.writeText(name);card.style.borderColor='#22c55e';setTimeout(()=>card.style.borderColor='#1e293b',1000)};
+    grid.appendChild(card);
+  }
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playLoop();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playLoop(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [196,247,294,370,294,247].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.6);g.gain.linearRampToValueAtTime(.04,now+i*.6+.1);g.gain.linearRampToValueAtTime(0,now+i*.6+.55);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.6);o.stop(now+i*.6+.6);
+  });
+  setTimeout(playLoop,3600);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

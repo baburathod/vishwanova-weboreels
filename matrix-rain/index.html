@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🟩 Matrix Rain</title>
+<meta name="description" content="The iconic Matrix digital rain effect with interactive controls.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden}
+canvas{display:block;position:fixed;top:0;left:0}
+.controls{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.ctrl{padding:.5rem 1rem;border-radius:10px;border:1.5px solid #22c55e33;background:rgba(0,0,0,0.7);color:#22c55e88;cursor:pointer;font-family:monospace;font-size:.85rem;transition:all .3s;backdrop-filter:blur(5px)}
+.ctrl:hover{border-color:#22c55e;color:#22c55e}
+.ctrl.active{background:rgba(34,197,94,0.1);border-color:#22c55e;color:#22c55e}
+.msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;font-family:monospace;font-size:clamp(1rem,3vw,2rem);color:#22c55e;text-shadow:0 0 20px #22c55e44;opacity:0;transition:opacity 2s;text-align:center;pointer-events:none;letter-spacing:5px}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(0,0,0,0.7);border:1.5px solid #22c55e33;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s}
+.music-toggle:hover{border-color:#22c55e;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="msg" id="msg">WAKE UP NEO...</div>
+<div class="controls">
+  <span class="ctrl active" data-color="green" onclick="setColor(this,'#22c55e')">🟩 Green</span>
+  <span class="ctrl" data-color="blue" onclick="setColor(this,'#06b6d4')">🟦 Cyan</span>
+  <span class="ctrl" data-color="purple" onclick="setColor(this,'#a78bfa')">🟪 Purple</span>
+  <span class="ctrl" data-color="red" onclick="setColor(this,'#ef4444')">🟥 Red</span>
+  <span class="ctrl" onclick="showMessage()">💊 Red Pill</span>
+  <span class="ctrl" onclick="toggleSpeed()">⚡ Speed</span>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('matrix'),ctx=canvas.getContext('2d');
+let W,H,columns,drops;
+let matrixColor='#22c55e';
+let fast=false;
+
+function resize(){
+  W=canvas.width=innerWidth;H=canvas.height=innerHeight;
+  const fontSize=14;
+  columns=Math.floor(W/fontSize);
+  drops=Array(columns).fill(1);
+}
+resize();window.addEventListener('resize',resize);
+
+const chars='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^&*()_+-=[]{}|;:,.<>?';
+
+function draw(){
+  ctx.fillStyle='rgba(0,0,0,0.05)';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.font='14px monospace';
+
+  for(let i=0;i<drops.length;i++){
+    const char=chars[Math.floor(Math.random()*chars.length)];
+    const x=i*14;
+    const y=drops[i]*14;
+
+    // Head character (bright)
+    ctx.fillStyle=matrixColor;
+    ctx.fillText(char,x,y);
+
+    // Trail glow
+    ctx.fillStyle=matrixColor+'33';
+    ctx.fillText(chars[Math.floor(Math.random()*chars.length)],x,y-14);
+
+    if(y>H&&Math.random()>0.975){
+      drops[i]=0;
+    }
+    drops[i]+=(fast?2:1);
+  }
+}
+
+function setColor(el,color){
+  document.querySelectorAll('.ctrl[data-color]').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  matrixColor=color;
+}
+
+const messages=["WAKE UP NEO...","THE MATRIX HAS YOU","FOLLOW THE WHITE RABBIT","THERE IS NO SPOON","FREE YOUR MIND","I KNOW KUNG FU","WELCOME TO THE REAL WORLD"];
+let msgIdx=0;
+function showMessage(){
+  const msg=document.getElementById('msg');
+  msg.textContent=messages[msgIdx%messages.length];
+  msg.style.color=matrixColor;
+  msg.style.opacity='1';
+  setTimeout(()=>msg.style.opacity='0',3000);
+  msgIdx++;
+}
+
+function toggleSpeed(){fast=!fast}
+
+function loop(){draw();requestAnimationFrame(loop)}
+loop();
+
+// Show initial message
+setTimeout(()=>{document.getElementById('msg').style.opacity='1';setTimeout(()=>document.getElementById('msg').style.opacity='0',3000)},1000);
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playMatrix();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playMatrix(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // Dark ambient
+  [65.41,82.41,98,130.81].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sawtooth';o.frequency.value=f;
+    const flt=audioCtx.createBiquadFilter();flt.type='lowpass';flt.frequency.value=300;
+    g.gain.setValueAtTime(0,now+i*1.5);g.gain.linearRampToValueAtTime(.03,now+i*1.5+.3);g.gain.linearRampToValueAtTime(0,now+i*1.5+1.4);
+    o.connect(flt);flt.connect(g);g.connect(audioCtx.destination);o.start(now+i*1.5);o.stop(now+i*1.5+1.5);
+  });
+  setTimeout(playMatrix,6000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

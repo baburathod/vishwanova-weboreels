@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎋 AI Haiku Generator</title>
+<meta name="description" content="Generate beautiful haikus with zen aesthetics and ambient sounds.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Inter:wght@300;400&display=swap');
+body{font-family:'Inter',sans-serif;min-height:100vh;background:#0c0c0c;color:#e8e0d4;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+.zen-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;background:radial-gradient(ellipse at center,#1a1612,#0c0c0c)}
+.container{position:relative;z-index:1;max-width:550px;width:90%;text-align:center;padding:2rem}
+h1{font-family:'Noto Serif JP',serif;font-size:clamp(2.5rem,8vw,4.5rem);font-weight:700;color:#c9a96e;margin-bottom:.5rem;text-shadow:0 0 40px #c9a96e22}
+.sub{color:#888;font-size:.85rem;letter-spacing:4px;margin-bottom:2.5rem;text-transform:uppercase}
+.themes{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1.5rem}
+.theme{padding:.5rem 1rem;border-radius:99px;border:1.5px solid #c9a96e33;background:transparent;color:#c9a96e88;cursor:pointer;font-size:.85rem;transition:all .3s;font-family:'Inter',sans-serif}
+.theme:hover{border-color:#c9a96e;color:#c9a96e}
+.theme.active{background:#c9a96e22;border-color:#c9a96e;color:#c9a96e}
+.gen-btn{width:100%;padding:1.1rem;border:none;border-radius:16px;background:linear-gradient(135deg,#c9a96e,#8b7346);color:#0c0c0c;font-size:1.1rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .3s;letter-spacing:2px}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px #c9a96e33}
+.haiku-card{margin-top:2.5rem;padding:3rem 2rem;border-radius:0;border:1px solid #c9a96e22;background:transparent;position:relative;display:none}
+.haiku-card.visible{display:block;animation:fadeIn 1.5s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.haiku-card::before,.haiku-card::after{content:'';position:absolute;width:40px;height:40px;border-color:#c9a96e44;border-style:solid}
+.haiku-card::before{top:0;left:0;border-width:1px 0 0 1px}
+.haiku-card::after{bottom:0;right:0;border-width:0 1px 1px 0}
+.haiku-text{font-family:'Noto Serif JP',serif;font-size:1.6rem;line-height:2.5;color:#e8e0d4;white-space:pre-line}
+.haiku-count{margin-top:1rem;font-size:.75rem;color:#666;letter-spacing:2px}
+.collection{margin-top:2rem;display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+.saved{padding:.4rem .8rem;border-radius:8px;background:#c9a96e11;border:1px solid #c9a96e22;font-size:.75rem;color:#c9a96e88;cursor:pointer}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#1a1612;border:2px solid #c9a96e44;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#c9a96e;transform:scale(1.1)}
+.petals{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+.petal{position:absolute;width:8px;height:8px;background:#c9a96e33;border-radius:50% 0 50% 50%;animation:fall linear infinite}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+<div class="zen-bg"></div>
+<div class="petals" id="petals"></div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>俳句</h1>
+  <p class="sub">AI Haiku Generator</p>
+  <div class="themes">
+    <span class="theme active" data-t="nature" onclick="setTheme(this)">🌿 Nature</span>
+    <span class="theme" data-t="time" onclick="setTheme(this)">⏳ Time</span>
+    <span class="theme" data-t="love" onclick="setTheme(this)">❤️ Love</span>
+    <span class="theme" data-t="solitude" onclick="setTheme(this)">🏔️ Solitude</span>
+    <span class="theme" data-t="urban" onclick="setTheme(this)">🌃 Urban</span>
+  </div>
+  <button class="gen-btn" onclick="genHaiku()">🎋 Generate Haiku</button>
+  <div class="haiku-card" id="card">
+    <div class="haiku-text" id="haiku"></div>
+    <div class="haiku-count" id="count">5 • 7 • 5</div>
+  </div>
+  <div class="collection" id="collection"></div>
+</div>
+<script>
+// Falling petals
+const petalsDiv=document.getElementById('petals');
+for(let i=0;i<20;i++){
+  const p=document.createElement('div');p.className='petal';
+  p.style.left=Math.random()*100+'%';
+  p.style.animationDuration=(Math.random()*8+6)+'s';
+  p.style.animationDelay=Math.random()*10+'s';
+  p.style.width=(Math.random()*6+4)+'px';p.style.height=p.style.width;
+  petalsDiv.appendChild(p);
+}
+
+let theme='nature';
+function setTheme(el){document.querySelectorAll('.theme').forEach(t=>t.classList.remove('active'));el.classList.add('active');theme=el.dataset.t}
+
+const haikus={
+  nature:[
+    "Cherry blossoms fall\nThe river carries them south\nSpring forgets no one",
+    "Ancient bamboo sways\nWhispering to the young shoots\nGrow toward the light",
+    "Morning dew trembles\nOn a spider's silver thread\nThe world holds its breath",
+    "Maple leaves descend\nPainting the earth crimson gold\nAutumn writes its poem",
+    "Snow on temple steps\nEach footprint a fleeting prayer\nSilence answers back",
+    "Fireflies at dusk\nWriting love notes in the dark\nNight reads every one",
+  ],
+  time:[
+    "Clock hands circle slow\nYet years sprint past like rivers\nWhere did morning go",
+    "Grandfather's old watch\nStill ticking in the drawer still\nTime outlives us all",
+    "Midnight strikes again\nTomorrow wears yesterday's face\nWe call it progress",
+    "Sand falls grain by grain\nEach one a moment we had\nThe glass never fills",
+    "Dawn breaks like a yawn\nThe sky stretches pink and gold\nAnother chance breathes",
+  ],
+  love:[
+    "Your name on my lips\nLike honey that never fades\nSweet even in sleep",
+    "Two cups on the shelf\nOne always touching the other\nThat is how we live",
+    "I loved you before\nI knew what the word could hold\nNow it holds the sky",
+    "Your laugh fills the room\nLike sunlight through dusty glass\nEverything glows warm",
+    "We argue in rain\nMake peace beneath the same roof\nLove is the doorway",
+  ],
+  solitude:[
+    "Alone on the hill\nThe wind has no opinion\nI finally rest",
+    "Empty chair at noon\nShadow keeps me company\nSilence understands",
+    "One candle burning\nThe darkness leans in to watch\nLight holds its own ground",
+    "Footprints on the beach\nOnly mine walk to the shore\nThe sea walks them back",
+    "Mountain cabin smoke\nRising like a quiet thought\nNo one asks me why",
+  ],
+  urban:[
+    "Neon signs blink slow\nRain turns the street to mirrors\nThe city sees itself",
+    "Subway doors close fast\nA stranger smiled at me once\nI still remember",
+    "Rooftop at midnight\nThe skyline hums a low song\nConcrete dreams of stars",
+    "Coffee shop corners\nLaptops glow like campfire light\nModern tribe gathers",
+    "Taxi honks at dawn\nPigeons own the intersection\nThe city belongs to no one",
+  ]
+};
+let saved=[];
+
+function genHaiku(){
+  const pool=haikus[theme];
+  const haiku=pool[Math.floor(Math.random()*pool.length)];
+  const card=document.getElementById('card');
+  card.classList.remove('visible');
+  setTimeout(()=>{
+    document.getElementById('haiku').textContent=haiku;
+    card.classList.add('visible');
+  },200);
+  if(!saved.includes(haiku)){
+    saved.push(haiku);
+    const el=document.createElement('span');
+    el.className='saved';
+    el.textContent=`#${saved.length}`;
+    el.title=haiku;
+    el.onclick=()=>{document.getElementById('haiku').textContent=haiku;card.classList.add('visible')};
+    document.getElementById('collection').appendChild(el);
+  }
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playZen();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playZen(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // Pentatonic scale for zen feel
+  const notes=[261.63,293.66,329.63,392,440];
+  for(let i=0;i<3;i++){
+    const f=notes[Math.floor(Math.random()*notes.length)];
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*2);g.gain.linearRampToValueAtTime(.04,now+i*2+.5);g.gain.linearRampToValueAtTime(0,now+i*2+1.8);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*2);o.stop(now+i*2+2);
+  }
+  // Wind chime
+  const chime=audioCtx.createOscillator();
+  const cg=audioCtx.createGain();
+  chime.type='sine';chime.frequency.value=notes[Math.floor(Math.random()*notes.length)]*2;
+  cg.gain.setValueAtTime(0,now);cg.gain.linearRampToValueAtTime(.02,now+.05);cg.gain.exponentialRampToValueAtTime(.001,now+2);
+  chime.connect(cg);cg.connect(audioCtx.destination);chime.start(now);chime.stop(now+2);
+  setTimeout(playZen,6000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

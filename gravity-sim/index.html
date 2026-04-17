@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🪐 Gravity Simulator</title>
+<meta name="description" content="Create planets and watch them orbit! Interactive gravity simulation with realistic physics.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;margin:0;background:#000;overflow:hidden;color:#fff}
+canvas{display:block;cursor:crosshair}
+.hud{position:fixed;top:1.5rem;left:1.5rem;z-index:10;display:flex;flex-direction:column;gap:.5rem}
+.hud-item{padding:.6rem 1rem;border-radius:10px;background:rgba(0,0,0,0.7);border:1px solid #333;font-size:.85rem;color:#aaa;backdrop-filter:blur(5px)}
+.hud-item span{color:#a78bfa;font-weight:700}
+.controls{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.ctrl-btn{padding:.6rem 1.2rem;border-radius:10px;background:rgba(0,0,0,0.7);border:1px solid #333;color:#aaa;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:.85rem;transition:all .3s;backdrop-filter:blur(5px)}
+.ctrl-btn:hover{border-color:#a78bfa;color:#fff}
+.ctrl-btn.active{border-color:#a78bfa;color:#a78bfa;background:rgba(167,139,250,0.1)}
+.instructions{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;text-align:center;padding:2rem;border-radius:20px;background:rgba(0,0,0,0.85);border:1px solid #333;backdrop-filter:blur(10px);max-width:400px;transition:opacity .5s}
+.instructions h2{font-size:1.5rem;color:#a78bfa;margin-bottom:1rem}
+.instructions p{color:#888;line-height:1.8;font-size:.95rem}
+.instructions .start-btn{margin-top:1.5rem;padding:.8rem 2rem;border:none;border-radius:12px;background:linear-gradient(135deg,#a78bfa,#06b6d4);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s}
+.instructions .start-btn:hover{transform:scale(1.05);box-shadow:0 5px 20px #a78bfa44}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(0,0,0,0.7);border:2px solid #333;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;backdrop-filter:blur(5px)}
+.music-toggle:hover{border-color:#a78bfa;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div class="hud">
+  <div class="hud-item">Bodies: <span id="count">0</span></div>
+  <div class="hud-item">FPS: <span id="fps">60</span></div>
+</div>
+<div class="controls">
+  <div class="ctrl-btn active" data-size="small" onclick="setSize(this)">🔵 Small</div>
+  <div class="ctrl-btn" data-size="medium" onclick="setSize(this)">🟡 Medium</div>
+  <div class="ctrl-btn" data-size="large" onclick="setSize(this)">🔴 Large</div>
+  <div class="ctrl-btn" onclick="clearBodies()">🗑️ Clear</div>
+  <div class="ctrl-btn" onclick="toggleTrails()">✨ Trails</div>
+</div>
+<div class="instructions" id="instructions">
+  <h2>🪐 Gravity Simulator</h2>
+  <p>Click and drag to create planets.<br>The drag direction sets velocity.<br>Watch them orbit and collide!<br><br>Choose size → Click → Drag → Release</p>
+  <button class="start-btn" onclick="this.parentElement.style.opacity='0';setTimeout(()=>this.parentElement.style.display='none',500)">🚀 Start Playing</button>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+const G=0.5;
+let bodies=[],trails=true,dragging=false,dragStart={x:0,y:0},dragEnd={x:0,y:0};
+let selectedSize='small';
+const sizes={small:{r:5,m:10,color:'#06b6d4'},medium:{r:12,m:80,color:'#fbbf24'},large:{r:25,m:500,color:'#ef4444'}};
+
+function setSize(el){document.querySelectorAll('.ctrl-btn[data-size]').forEach(b=>b.classList.remove('active'));el.classList.add('active');selectedSize=el.dataset.size}
+function clearBodies(){bodies=[]}
+function toggleTrails(){trails=!trails}
+
+canvas.addEventListener('mousedown',e=>{dragging=true;dragStart={x:e.clientX,y:e.clientY}});
+canvas.addEventListener('mousemove',e=>{if(dragging)dragEnd={x:e.clientX,y:e.clientY}});
+canvas.addEventListener('mouseup',e=>{
+  if(!dragging)return;dragging=false;
+  const s=sizes[selectedSize];
+  const vx=(dragStart.x-e.clientX)*0.05;
+  const vy=(dragStart.y-e.clientY)*0.05;
+  bodies.push({x:dragStart.x,y:dragStart.y,vx,vy,r:s.r+Math.random()*3,m:s.m,color:s.color,trail:[]});
+  playSpawn();
+});
+canvas.addEventListener('touchstart',e=>{dragging=true;dragStart={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault()});
+canvas.addEventListener('touchmove',e=>{if(dragging)dragEnd={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault()});
+canvas.addEventListener('touchend',e=>{
+  if(!dragging)return;dragging=false;
+  const s=sizes[selectedSize];
+  const touch=e.changedTouches[0];
+  const vx=(dragStart.x-touch.clientX)*0.05;
+  const vy=(dragStart.y-touch.clientY)*0.05;
+  bodies.push({x:dragStart.x,y:dragStart.y,vx,vy,r:s.r+Math.random()*3,m:s.m,color:s.color,trail:[]});
+  playSpawn();
+});
+
+let lastTime=performance.now(),frameCount=0,fpsDisplay=0;
+
+function update(){
+  frameCount++;
+  const now=performance.now();
+  if(now-lastTime>=1000){fpsDisplay=frameCount;frameCount=0;lastTime=now;document.getElementById('fps').textContent=fpsDisplay}
+
+  // Gravity
+  for(let i=0;i<bodies.length;i++){
+    for(let j=i+1;j<bodies.length;j++){
+      const dx=bodies[j].x-bodies[i].x;
+      const dy=bodies[j].y-bodies[i].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<bodies[i].r+bodies[j].r){
+        // Merge
+        if(bodies[i].m>=bodies[j].m){
+          bodies[i].vx=(bodies[i].vx*bodies[i].m+bodies[j].vx*bodies[j].m)/(bodies[i].m+bodies[j].m);
+          bodies[i].vy=(bodies[i].vy*bodies[i].m+bodies[j].vy*bodies[j].m)/(bodies[i].m+bodies[j].m);
+          bodies[i].m+=bodies[j].m;
+          bodies[i].r=Math.sqrt(bodies[i].r**2+bodies[j].r**2);
+          bodies.splice(j,1);j--;
+        } else {
+          bodies[j].vx=(bodies[i].vx*bodies[i].m+bodies[j].vx*bodies[j].m)/(bodies[i].m+bodies[j].m);
+          bodies[j].vy=(bodies[i].vy*bodies[i].m+bodies[j].vy*bodies[j].m)/(bodies[i].m+bodies[j].m);
+          bodies[j].m+=bodies[i].m;
+          bodies[j].r=Math.sqrt(bodies[i].r**2+bodies[j].r**2);
+          bodies.splice(i,1);i--;break;
+        }
+        continue;
+      }
+      const F=G*bodies[i].m*bodies[j].m/(dist*dist);
+      const fx=F*dx/dist;
+      const fy=F*dy/dist;
+      bodies[i].vx+=fx/bodies[i].m;
+      bodies[i].vy+=fy/bodies[i].m;
+      bodies[j].vx-=fx/bodies[j].m;
+      bodies[j].vy-=fy/bodies[j].m;
+    }
+  }
+
+  bodies.forEach(b=>{
+    b.x+=b.vx;b.y+=b.vy;
+    if(trails){b.trail.push({x:b.x,y:b.y});if(b.trail.length>80)b.trail.shift()}
+    // Wrap
+    if(b.x<-50)b.x=W+50;if(b.x>W+50)b.x=-50;
+    if(b.y<-50)b.y=H+50;if(b.y>H+50)b.y=-50;
+  });
+
+  document.getElementById('count').textContent=bodies.length;
+}
+
+function draw(){
+  if(!trails){ctx.fillStyle='#000';ctx.fillRect(0,0,W,H)}
+  else{ctx.fillStyle='rgba(0,0,0,0.08)';ctx.fillRect(0,0,W,H)}
+
+  // Draw trails
+  if(trails){
+    bodies.forEach(b=>{
+      if(b.trail.length<2)return;
+      ctx.beginPath();ctx.moveTo(b.trail[0].x,b.trail[0].y);
+      for(let i=1;i<b.trail.length;i++)ctx.lineTo(b.trail[i].x,b.trail[i].y);
+      ctx.strokeStyle=b.color+'44';ctx.lineWidth=1;ctx.stroke();
+    });
+  }
+
+  // Draw bodies
+  bodies.forEach(b=>{
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    const grad=ctx.createRadialGradient(b.x-b.r*.3,b.y-b.r*.3,0,b.x,b.y,b.r);
+    grad.addColorStop(0,'#fff');grad.addColorStop(0.3,b.color);grad.addColorStop(1,b.color+'44');
+    ctx.fillStyle=grad;ctx.fill();
+    // Glow
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*2,0,Math.PI*2);
+    const glow=ctx.createRadialGradient(b.x,b.y,b.r,b.x,b.y,b.r*2);
+    glow.addColorStop(0,b.color+'22');glow.addColorStop(1,'transparent');
+    ctx.fillStyle=glow;ctx.fill();
+  });
+
+  // Draw drag line
+  if(dragging){
+    ctx.beginPath();ctx.moveTo(dragStart.x,dragStart.y);ctx.lineTo(dragEnd.x,dragEnd.y);
+    ctx.strokeStyle='#a78bfa88';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.stroke();ctx.setLineDash([]);
+    const s=sizes[selectedSize];
+    ctx.beginPath();ctx.arc(dragStart.x,dragStart.y,s.r,0,Math.PI*2);ctx.fillStyle=s.color+'88';ctx.fill();
+  }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+// Add some initial bodies
+bodies.push({x:W/2,y:H/2,vx:0,vy:0,r:30,m:1000,color:'#fbbf24',trail:[]});
+bodies.push({x:W/2+200,y:H/2,vx:0,vy:2.5,r:8,m:15,color:'#06b6d4',trail:[]});
+bodies.push({x:W/2-150,y:H/2,vx:0,vy:-2,r:6,m:10,color:'#22c55e',trail:[]});
+
+let audioCtx,musicOn=false;
+function playSpawn(){
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=400+Math.random()*400;
+    g.gain.setValueAtTime(.1,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.3);
+    o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.3);
+  }catch(e){}
+}
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();playSpace();musicOn=true;btn.textContent='🔊'}
+  else{if(audioCtx){audioCtx.close();audioCtx=null}musicOn=false;btn.textContent='🔇'}
+}
+function playSpace(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  const notes=[130.81,164.81,196,261.63];
+  notes.forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*2);g.gain.linearRampToValueAtTime(.03,now+i*2+.5);g.gain.linearRampToValueAtTime(0,now+i*2+1.8);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*2);o.stop(now+i*2+2);
+  });
+  setTimeout(playSpace,8000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

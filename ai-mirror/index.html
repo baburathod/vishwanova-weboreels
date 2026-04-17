@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🪞 AI Mirror - Who Are You?</title>
+<meta name="description" content="Answer deep questions and discover your personality profile with stunning visuals.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
+body{font-family:'Outfit',sans-serif;min-height:100vh;background:#0a0a14;color:#fff;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.container{position:relative;z-index:1;max-width:600px;width:90%;text-align:center;padding:2rem}
+h1{font-size:clamp(2rem,7vw,4rem);font-weight:900;background:linear-gradient(135deg,#c084fc,#818cf8,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+.sub{color:#818cf888;letter-spacing:3px;font-size:.85rem;margin-bottom:2rem;text-transform:uppercase}
+.question-area{padding:2rem;border-radius:20px;background:rgba(18,18,30,0.8);border:1px solid #818cf822;backdrop-filter:blur(10px);margin-bottom:1rem}
+.q-number{font-size:.8rem;color:#818cf8;margin-bottom:.5rem;letter-spacing:2px}
+.q-text{font-size:1.3rem;font-weight:500;line-height:1.8;margin-bottom:1.5rem;color:#e2e8f0}
+.slider-container{margin-bottom:1rem}
+.slider-labels{display:flex;justify-content:space-between;font-size:.8rem;color:#666;margin-bottom:.5rem}
+input[type="range"]{width:100%;-webkit-appearance:none;background:linear-gradient(90deg,#c084fc,#818cf8,#06b6d4);height:6px;border-radius:99px;outline:none;cursor:pointer}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 0 15px #818cf888;cursor:pointer}
+.next-btn{width:100%;padding:1rem;border:none;border-radius:16px;background:linear-gradient(135deg,#818cf8,#c084fc);color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .3s;letter-spacing:2px}
+.next-btn:hover{transform:translateY(-2px);box-shadow:0 5px 20px #818cf855}
+.progress{height:4px;background:#1e1e35;border-radius:99px;margin-bottom:1.5rem;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#c084fc,#818cf8);transition:width .5s}
+.result-area{display:none;padding:2rem;border-radius:20px;background:rgba(18,18,30,0.8);border:1px solid #818cf822;backdrop-filter:blur(10px)}
+.result-area.show{display:block;animation:fadeIn .8s ease}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.result-type{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,#c084fc,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:.5rem 0}
+.result-emoji{font-size:4rem;margin-bottom:.5rem}
+.result-desc{font-size:1rem;color:#8b949e;line-height:1.8;margin-bottom:1.5rem}
+.traits{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem}
+.trait{padding:.8rem;border-radius:12px;background:#0a0a14;border:1px solid #818cf822;text-align:center}
+.trait-label{font-size:.7rem;color:#666;text-transform:uppercase;letter-spacing:1px}
+.trait-bar{height:4px;background:#222;border-radius:99px;margin:.4rem 0;overflow:hidden}
+.trait-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#c084fc,#818cf8)}
+.trait-val{font-size:1rem;font-weight:700;color:#c084fc}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(18,18,30,0.8);border:2px solid #818cf844;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#818cf8;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>AI Mirror</h1>
+  <p class="sub">Discover who you really are</p>
+  <div class="progress"><div class="progress-fill" id="progress" style="width:0"></div></div>
+  <div class="question-area" id="questionArea">
+    <div class="q-number" id="qNum">QUESTION 1 OF 8</div>
+    <div class="q-text" id="qText"></div>
+    <div class="slider-container">
+      <div class="slider-labels"><span id="leftLabel"></span><span id="rightLabel"></span></div>
+      <input type="range" min="0" max="100" value="50" id="slider">
+    </div>
+    <button class="next-btn" onclick="nextQ()">Continue →</button>
+  </div>
+  <div class="result-area" id="resultArea">
+    <div class="result-emoji" id="rEmoji"></div>
+    <div class="result-type" id="rType"></div>
+    <div class="result-desc" id="rDesc"></div>
+    <div class="traits" id="traits"></div>
+    <button class="next-btn" onclick="restart()">🔄 Retake</button>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+let orbs=[];
+for(let i=0;i<20;i++) orbs.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*80+30,dx:(Math.random()-.5)*.3,dy:(Math.random()-.5)*.3,hue:Math.random()*60+240});
+function drawBg(){
+  ctx.fillStyle='rgba(10,10,20,0.03)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  orbs.forEach(o=>{o.x+=o.dx;o.y+=o.dy;if(o.x<-100||o.x>canvas.width+100)o.dx*=-1;if(o.y<-100||o.y>canvas.height+100)o.dy*=-1;
+    const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);g.addColorStop(0,`hsla(${o.hue},60%,50%,0.05)`);g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill()});
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+const questions=[
+  {q:"In a group, I'm usually the one who...",left:"Listens quietly",right:"Leads the conversation",traits:["introversion","extroversion"]},
+  {q:"When I face a problem, I tend to...",left:"Analyze methodically",right:"Trust my gut feeling",traits:["thinking","feeling"]},
+  {q:"My ideal weekend looks like...",left:"Planning ahead",right:"Going with the flow",traits:["structure","flexibility"]},
+  {q:"In relationships I value...",left:"Deep connection with few",right:"Wide circle of many",traits:["depth","breadth"]},
+  {q:"When making decisions I focus on...",left:"Logic and facts",right:"Values and emotions",traits:["thinking","feeling"]},
+  {q:"I recharge by...",left:"Being alone",right:"Being with people",traits:["introversion","extroversion"]},
+  {q:"I prefer projects that are...",left:"Carefully planned",right:"Spontaneous and adaptive",traits:["structure","flexibility"]},
+  {q:"I'm more attracted to...",left:"Ideas and theories",right:"Practical solutions",traits:["abstract","concrete"]},
+];
+
+let currentQ=0,answers=[];
+const scores={introversion:0,extroversion:0,thinking:0,feeling:0,structure:0,flexibility:0,depth:0,breadth:0,abstract:0,concrete:0};
+
+function showQuestion(){
+  const q=questions[currentQ];
+  document.getElementById('qNum').textContent=`QUESTION ${currentQ+1} OF ${questions.length}`;
+  document.getElementById('qText').textContent=q.q;
+  document.getElementById('leftLabel').textContent=q.left;
+  document.getElementById('rightLabel').textContent=q.right;
+  document.getElementById('slider').value=50;
+  document.getElementById('progress').style.width=((currentQ/questions.length)*100)+'%';
+}
+
+function nextQ(){
+  const val=parseInt(document.getElementById('slider').value);
+  const q=questions[currentQ];
+  scores[q.traits[0]]+=(100-val);
+  scores[q.traits[1]]+=val;
+  currentQ++;
+  if(currentQ>=questions.length){showResult()}
+  else{showQuestion()}
+}
+
+const types=[
+  {emoji:"🧙",name:"The Visionary",desc:"You see the world not as it is, but as it could be. A natural dreamer with deep analytical skills, you're the rare person who can both imagine the future AND build it. You thrive in solitude but inspire others with your ideas.",match:s=>s.introversion>s.extroversion&&s.abstract>s.concrete,traits:{creativity:92,empathy:78,logic:85,adaptability:70}},
+  {emoji:"🦁",name:"The Catalyst",desc:"You walk into a room and the energy shifts. A natural leader with both heart and fire, you make things happen through sheer force of personality. People don't just follow you — they WANT to follow you.",match:s=>s.extroversion>s.introversion&&s.feeling>s.thinking,traits:{creativity:75,empathy:90,logic:65,adaptability:88}},
+  {emoji:"🏗️",name:"The Architect",desc:"You build empires from blueprints. Your mind is a cathedral of logic and structure. While others see chaos, you see systems. You're the person everyone calls when things need to actually WORK.",match:s=>s.thinking>s.feeling&&s.structure>s.flexibility,traits:{creativity:70,empathy:60,logic:95,adaptability:55}},
+  {emoji:"🌊",name:"The Explorer",desc:"Rules bore you. Routine kills you. You're alive when you're discovering something new. Your superpower is adaptability — you can thrive anywhere, making friends in any language and culture.",match:s=>s.flexibility>s.structure&&s.breadth>s.depth,traits:{creativity:88,empathy:82,logic:60,adaptability:95}},
+  {emoji:"🔮",name:"The Empath",desc:"You feel what others feel before they do. Your emotional intelligence is off the charts. In a world obsessed with logic, you remind people that understanding comes from the heart first.",match:s=>s.feeling>s.thinking&&s.depth>s.breadth,traits:{creativity:80,empathy:98,logic:55,adaptability:75}},
+];
+
+function showResult(){
+  document.getElementById('progress').style.width='100%';
+  let type=types.find(t=>t.match(scores))||types[0];
+  document.getElementById('questionArea').style.display='none';
+  document.getElementById('rEmoji').textContent=type.emoji;
+  document.getElementById('rType').textContent=type.name;
+  document.getElementById('rDesc').textContent=type.desc;
+  const traitsDiv=document.getElementById('traits');
+  traitsDiv.innerHTML='';
+  Object.entries(type.traits).forEach(([k,v])=>{
+    traitsDiv.innerHTML+=`<div class="trait"><div class="trait-label">${k}</div><div class="trait-bar"><div class="trait-fill" style="width:${v}%"></div></div><div class="trait-val">${v}%</div></div>`;
+  });
+  document.getElementById('resultArea').classList.add('show');
+}
+
+function restart(){
+  currentQ=0;Object.keys(scores).forEach(k=>scores[k]=0);
+  document.getElementById('questionArea').style.display='block';
+  document.getElementById('resultArea').classList.remove('show');
+  document.getElementById('resultArea').style.display='none';
+  showQuestion();
+  setTimeout(()=>document.getElementById('resultArea').style.display='',100);
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playAmbient();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playAmbient(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [220,277.18,329.63,440,329.63].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*1.8);g.gain.linearRampToValueAtTime(.035,now+i*1.8+.4);g.gain.linearRampToValueAtTime(0,now+i*1.8+1.6);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*1.8);o.stop(now+i*1.8+1.8);
+  });
+  setTimeout(playAmbient,9000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+showQuestion();
+</script>
+</body>
+</html>

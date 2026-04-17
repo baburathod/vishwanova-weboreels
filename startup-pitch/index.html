@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚀 Startup Pitch Generator</title>
+<meta name="description" content="Generate ridiculous and genius startup ideas instantly!">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0c0c1d,#1a0a2e,#0c0c1d);color:#fff;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.container{position:relative;z-index:1;max-width:650px;width:90%;text-align:center;padding:2rem}
+h1{font-size:clamp(2rem,7vw,4rem);font-weight:700;background:linear-gradient(135deg,#00d4ff,#7c3aed,#ff3cac);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+.sub{color:#7c3aed99;letter-spacing:3px;text-transform:uppercase;font-size:.9rem;margin-bottom:2rem}
+.pitch-card{padding:2.5rem;border-radius:24px;background:rgba(124,58,237,0.08);border:1px solid #7c3aed33;backdrop-filter:blur(10px);margin-bottom:1.5rem;min-height:200px;display:flex;flex-direction:column;justify-content:center;transition:all .5s}
+.pitch-name{font-size:2rem;font-weight:700;color:#00d4ff;margin-bottom:1rem}
+.pitch-tagline{font-size:1.1rem;color:#c4b5fd;margin-bottom:1.5rem;line-height:1.6;font-style:italic}
+.pitch-desc{font-size:1rem;color:#aaa;line-height:1.8}
+.valuation{margin-top:1.5rem;padding:1rem;border-radius:12px;background:linear-gradient(135deg,#7c3aed22,#00d4ff22);display:flex;justify-content:space-around;flex-wrap:wrap;gap:.5rem}
+.val-item{text-align:center}
+.val-label{font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:1px}
+.val-num{font-size:1.5rem;font-weight:700;color:#00d4ff}
+.gen-btn{width:100%;padding:1.2rem;border:none;border-radius:16px;background:linear-gradient(135deg,#7c3aed,#00d4ff);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;cursor:pointer;transition:all .3s;text-transform:uppercase;letter-spacing:3px}
+.gen-btn:hover{transform:translateY(-3px);box-shadow:0 10px 40px #7c3aed55}
+.gen-btn:active{transform:scale(.97)}
+.investor-reaction{margin-top:1.5rem;padding:1rem;border-radius:12px;border:1px solid #333;font-size:.95rem;color:#888}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#1a0a2e;border:2px solid #7c3aed44;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#7c3aed;transform:scale(1.1)}
+.tags{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+.tag{padding:.4rem .8rem;border-radius:99px;background:#7c3aed22;color:#c4b5fd;font-size:.8rem;border:1px solid #7c3aed33}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>Startup Pitch Generator</h1>
+  <p class="sub">Your next billion-dollar idea in 3...2...1...</p>
+
+  <div class="pitch-card" id="card">
+    <div class="pitch-name" id="name">🚀 Click Generate!</div>
+    <div class="pitch-tagline" id="tagline">Your next startup idea is one click away</div>
+    <div class="pitch-desc" id="desc"></div>
+    <div class="valuation" id="valuation" style="display:none">
+      <div class="val-item"><div class="val-label">Valuation</div><div class="val-num" id="val">$0</div></div>
+      <div class="val-item"><div class="val-label">Burn Rate</div><div class="val-num" id="burn">$0/mo</div></div>
+      <div class="val-item"><div class="val-label">Pivot Risk</div><div class="val-num" id="pivot">0%</div></div>
+    </div>
+    <div class="tags" id="tags"></div>
+  </div>
+
+  <button class="gen-btn" onclick="generate()">🎲 Generate Startup</button>
+
+  <div class="investor-reaction" id="reaction"></div>
+</div>
+
+<script>
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+let particles=[];
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+for(let i=0;i<60;i++) particles.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*3+1,dx:(Math.random()-.5)*.5,dy:(Math.random()-.5)*.5,hue:Math.random()*60+240});
+
+function draw(){
+  ctx.fillStyle='rgba(12,12,29,0.1)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  particles.forEach((p,i)=>{
+    p.x+=p.dx;p.y+=p.dy;
+    if(p.x<0||p.x>canvas.width)p.dx*=-1;
+    if(p.y<0||p.y>canvas.height)p.dy*=-1;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${p.hue},80%,60%,0.4)`;ctx.fill();
+    // Lines
+    for(let j=i+1;j<particles.length;j++){
+      const dx=p.x-particles[j].x,dy=p.y-particles[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<150){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`hsla(260,60%,50%,${(150-d)/150*0.2})`;ctx.stroke()}
+    }
+  });
+  requestAnimationFrame(draw);
+}
+draw();
+
+const startups=[
+  {name:"SleepCoin",tagline:"Earn crypto while you sleep. Literally.",desc:"A wearable device tracks your sleep quality and mines a proprietary cryptocurrency based on REM cycle depth. The deeper you sleep, the more you earn. Insomniacs get nothing. Sweet dreams = sweet profits.",tags:["FinTech","HealthTech","Web3"],valuation:"$420M",burn:"$2.1M/mo",pivot:"73%",reaction:"'I don't understand it, but my teenage son is excited, so here's $50M.' — Sequoia Partner"},
+  {name:"Ghosted.ai",tagline:"AI that writes your breakup texts so you don't have to.",desc:"Using advanced sentiment analysis, Ghosted.ai crafts the perfect goodbye message. Choose from 'It's not you, it's me', 'Let's be friends', or the premium 'Witness Protection Program' tier where we fake your death digitally.",tags:["AI","Relationships","SaaS"],valuation:"$89M",burn:"$800K/mo",pivot:"45%",reaction:"'Finally, technology solving REAL problems.' — Y Combinator Demo Day Judge"},
+  {name:"UberEats for Pets",tagline:"Because Mr. Whiskers deserves DoorDash too.",desc:"Premium meal delivery for pets, featuring Michelin-star-inspired kibble, artisan bone broth, and a 'Chef's Table' experience where a tiny chef hat is placed on your pet's head during delivery. Investors are barking up the right tree.",tags:["FoodTech","PetTech","Delivery"],valuation:"$230M",burn:"$3.5M/mo",pivot:"28%",reaction:"'My cat already has better taste than me. Take my money.' — Andreessen Horowitz"},
+  {name:"ProcrastiNot",tagline:"The app that procrastinates FOR you, so you don't have to.",desc:"AI agent browses Reddit, watches YouTube, and doomscrolls Twitter on your behalf while you stay productive. Get a daily digest of memes you would have wasted time on. Guilt-free productivity through outsourced procrastination.",tags:["Productivity","AI","Mental Health"],valuation:"$156M",burn:"$1.2M/mo",pivot:"62%",reaction:"'I was going to invest tomorrow, but then I used the app and invested today.' — SoftBank"},
+  {name:"BlockchainBirthdays",tagline:"Never forget a birthday again. It's on-chain.",desc:"Every birthday is minted as an NFT on the blockchain. Smart contracts automatically send gifts, post on social media, and guilt-trip you if you haven't called your mom. Forgetting birthdays becomes a verifiable on-chain offense.",tags:["Web3","Social","NFT"],valuation:"$67M",burn:"$500K/mo",pivot:"88%",reaction:"'This is either genius or insanity. We're in for $20M either way.' — a16z crypto"},
+  {name:"Vibe Check Inc.",tagline:"IoT sensors that measure the vibe of any room.",desc:"Tiny sensors placed around your space analyze acoustics, temperature, lighting, and human micro-expressions to output a real-time 'Vibe Score' from 0-100. Conference rooms scoring below 40 automatically play lo-fi beats and dim the lights.",tags:["IoT","AI","Workplace"],valuation:"$312M",burn:"$2.8M/mo",pivot:"35%",reaction:"'The vibe in this pitch meeting is a solid 87. Invested.' — First Round Capital"},
+  {name:"Déjà Brew",tagline:"Coffee that remembers your mood.",desc:"Smart coffee machine with facial recognition and mood detection. Feeling sad? Extra espresso shot. Feeling energetic? Decaf with lavender. Feeling existential? It plays a philosophy podcast and serves black coffee. No sugar. Life is bitter enough.",tags:["FoodTech","AI","Hardware"],valuation:"$198M",burn:"$1.8M/mo",pivot:"41%",reaction:"'It detected I was stressed during the demo and made me chamomile. I cried. Here's $30M.' — Greylock"},
+  {name:"404 Dating",tagline:"For people who can't find love — Error 404: Partner Not Found.",desc:"A dating app exclusively for developers. Match based on preferred programming language, tabs vs spaces stance, and git commit frequency. Couples who both use vim get a free wedding venue (a server room).",tags:["Social","DevTools","Dating"],valuation:"$145M",burn:"$950K/mo",pivot:"55%",reaction:"'I met my co-founder here. Still single though.' — Hacker News top comment"},
+];
+
+function generate(){
+  const s=startups[Math.floor(Math.random()*startups.length)];
+  const card=document.getElementById('card');
+  card.style.transform='scale(0.95)';card.style.opacity='0.5';
+
+  setTimeout(()=>{
+    document.getElementById('name').textContent='🚀 '+s.name;
+    document.getElementById('tagline').textContent='"'+s.tagline+'"';
+    document.getElementById('desc').textContent=s.desc;
+    document.getElementById('val').textContent=s.valuation;
+    document.getElementById('burn').textContent=s.burn;
+    document.getElementById('pivot').textContent=s.pivot;
+    document.getElementById('valuation').style.display='flex';
+    document.getElementById('tags').innerHTML=s.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+    document.getElementById('reaction').textContent=s.reaction;
+    card.style.transform='scale(1)';card.style.opacity='1';
+  },400);
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playBeat();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playBeat(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [130.81,164.81,196,261.63].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.8);g.gain.linearRampToValueAtTime(.04,now+i*.8+.1);g.gain.linearRampToValueAtTime(0,now+i*.8+.7);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.8);o.stop(now+i*.8+.8);
+  });
+  setTimeout(playBeat,3200);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👨‍💻 Developer Personality Quiz</title>
+<meta name="description" content="Find out what type of developer you are with this fun quiz!">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;500;700&display=swap');
+body{font-family:'Inter',sans-serif;min-height:100vh;background:#0d1117;color:#c9d1d9;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.container{position:relative;z-index:1;max-width:600px;width:90%;text-align:center;padding:2rem}
+h1{font-family:'JetBrains Mono',monospace;font-size:clamp(1.8rem,5vw,3rem);font-weight:700;color:#58a6ff;margin-bottom:.5rem}
+.sub{color:#484f58;font-size:.9rem;margin-bottom:2rem;font-family:'JetBrains Mono',monospace}
+.progress{height:4px;background:#21262d;border-radius:99px;margin-bottom:2rem;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#58a6ff,#a78bfa);border-radius:99px;transition:width .5s ease;width:0}
+.question-card{padding:2rem;border-radius:16px;background:#161b22;border:1px solid #30363d;text-align:left}
+.q-num{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#58a6ff;margin-bottom:.5rem}
+.q-text{font-size:1.2rem;font-weight:700;margin-bottom:1.5rem;color:#e6edf3;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:.8rem}
+.option{padding:1rem 1.2rem;border-radius:12px;border:2px solid #30363d;background:#0d1117;cursor:pointer;transition:all .3s;font-size:.95rem;color:#c9d1d9;text-align:left}
+.option:hover{border-color:#58a6ff;background:#58a6ff11}
+.option.selected{border-color:#a78bfa;background:#a78bfa22;color:#fff}
+.result{display:none;padding:2rem;border-radius:16px;background:#161b22;border:1px solid #30363d;text-align:center}
+.result.show{display:block;animation:fadeIn .8s ease}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.result-emoji{font-size:5rem;margin-bottom:1rem}
+.result-title{font-family:'JetBrains Mono',monospace;font-size:1.8rem;color:#58a6ff;margin-bottom:.5rem}
+.result-desc{font-size:1rem;color:#8b949e;line-height:1.8;margin-bottom:1.5rem}
+.result-stats{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1.5rem}
+.r-stat{padding:.8rem;border-radius:10px;background:#0d1117;border:1px solid #30363d;text-align:center}
+.r-stat-label{font-size:.7rem;color:#484f58;text-transform:uppercase;letter-spacing:1px}
+.r-stat-val{font-size:1.2rem;font-weight:700;color:#58a6ff;margin-top:.3rem}
+.restart-btn{padding:.8rem 2rem;border-radius:12px;border:none;background:linear-gradient(135deg,#58a6ff,#a78bfa);color:#fff;font-family:'Inter',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s}
+.restart-btn:hover{transform:translateY(-2px);box-shadow:0 5px 20px #58a6ff44}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#161b22;border:2px solid #30363d;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#58a6ff;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>&gt;_ Dev Quiz</h1>
+  <p class="sub">console.log("What developer are you?")</p>
+  <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="question-card" id="questionCard">
+    <div class="q-num" id="qNum"></div>
+    <div class="q-text" id="qText"></div>
+    <div class="options" id="options"></div>
+  </div>
+  <div class="result" id="result">
+    <div class="result-emoji" id="rEmoji"></div>
+    <div class="result-title" id="rTitle"></div>
+    <div class="result-desc" id="rDesc"></div>
+    <div class="result-stats" id="rStats"></div>
+    <button class="restart-btn" onclick="startQuiz()">🔄 Take Again</button>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+let codeLines=[];
+for(let i=0;i<30;i++) codeLines.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,speed:Math.random()*.5+.2,length:Math.random()*100+50,opacity:Math.random()*.15+.05});
+function draw(){
+  ctx.fillStyle='rgba(13,17,23,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  codeLines.forEach(l=>{l.y+=l.speed;if(l.y>canvas.height){l.y=-20;l.x=Math.random()*canvas.width}
+    ctx.strokeStyle=`rgba(88,166,255,${l.opacity})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(l.x,l.y);ctx.lineTo(l.x,l.y+l.length);ctx.stroke()});
+  requestAnimationFrame(draw);
+}
+draw();
+
+const questions=[
+  {q:"It's 2 AM. Your code finally works. You...",opts:[{t:"Write tests immediately",type:"architect"},{t:"Ship it NOW before it breaks again",type:"hacker"},{t:"Refactor the whole thing beautifully",type:"artist"},{t:"Go to sleep. It'll still work tomorrow... right?",type:"pragmatist"}]},
+  {q:"Your ideal weekend project is...",opts:[{t:"Building a CLI tool that automates my life",type:"hacker"},{t:"Designing a beautiful portfolio site",type:"artist"},{t:"Contributing to open source",type:"architect"},{t:"REST. The code can wait.",type:"pragmatist"}]},
+  {q:"Tabs or spaces?",opts:[{t:"Tabs. Fight me.",type:"hacker"},{t:"Spaces. I have standards.",type:"architect"},{t:"Whatever the linter says",type:"pragmatist"},{t:"I use a font with aesthetic indentation",type:"artist"}]},
+  {q:"Someone reviews your PR and suggests 47 changes. You...",opts:[{t:"Address every single one systematically",type:"architect"},{t:"Push back on 40 of them with reasoning",type:"hacker"},{t:"Wonder if the code looked ugly to them",type:"artist"},{t:"Merge it when they go to lunch",type:"pragmatist"}]},
+  {q:"Your favorite type of bug is...",opts:[{t:"The one that teaches me something new",type:"architect"},{t:"The one I fix in 30 seconds",type:"hacker"},{t:"The one caused by a beautiful but wrong algorithm",type:"artist"},{t:"'Bugs'? I call them 'undocumented features'",type:"pragmatist"}]},
+  {q:"If you could only use one tool forever...",opts:[{t:"vim/neovim",type:"hacker"},{t:"VS Code with 47 extensions",type:"pragmatist"},{t:"A beautifully configured terminal",type:"artist"},{t:"IntelliJ with every plugin known to mankind",type:"architect"}]},
+  {q:"Your commit messages look like...",opts:[{t:"feat(auth): implement OAuth2 PKCE flow with refresh token rotation",type:"architect"},{t:"fix stuff",type:"hacker"},{t:"✨ beautified the login page ✨",type:"artist"},{t:"it works now please don't ask why",type:"pragmatist"}]},
+  {q:"A junior dev asks you for help. You...",opts:[{t:"Pair program for an hour, explaining every concept",type:"architect"},{t:"Send them a Stack Overflow link. They'll learn.",type:"hacker"},{t:"Show them how to make their code more elegant",type:"artist"},{t:"Tell them the answer and get back to your work",type:"pragmatist"}]},
+];
+
+const results={
+  architect:{emoji:"🏗️",title:"The Architect",desc:"You build systems like cathedrals — meticulously planned, beautifully structured, and possibly over-engineered. Your code reviews are legendary, your documentation is impeccable, and your design patterns have design patterns.",stats:{clean_code:"98%",debug_speed:"85%",coffee_intake:"4 cups",stack_overflow:"Answerer"}},
+  hacker:{emoji:"⚡",title:"The Hacker",desc:"You ship code at the speed of thought. Your motto: 'Move fast and fix things later.' Your terminal history is a novel, your scripts automate everything, and you've written production code on a phone. Twice.",stats:{clean_code:"60%",debug_speed:"99%",coffee_intake:"∞",stack_overflow:"Speed runner"}},
+  artist:{emoji:"🎨",title:"The Artist",desc:"Code is your canvas. Your CSS is pixel-perfect, your animations are silky smooth, and you once spent 3 hours choosing the perfect border-radius. Your code doesn't just work — it LOOKS like it works.",stats:{clean_code:"90%",debug_speed:"70%",coffee_intake:"Matcha only",stack_overflow:"For CSS only"}},
+  pragmatist:{emoji:"🧘",title:"The Pragmatist",desc:"You write code that works, go home on time, and sleep 8 hours. You don't have opinions about tabs vs spaces because you have a LIFE. You're the backbone of every team and somehow always meet deadlines.",stats:{clean_code:"80%",debug_speed:"80%",coffee_intake:"1 cup",stack_overflow:"Only when stuck"}},
+};
+
+let currentQ=0,scores={architect:0,hacker:0,artist:0,pragmatist:0};
+
+function startQuiz(){
+  currentQ=0;scores={architect:0,hacker:0,artist:0,pragmatist:0};
+  document.getElementById('questionCard').style.display='block';
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('result').style.display='none';
+  showQuestion();
+}
+
+function showQuestion(){
+  const q=questions[currentQ];
+  document.getElementById('progressFill').style.width=((currentQ/questions.length)*100)+'%';
+  document.getElementById('qNum').textContent=`Question ${currentQ+1} of ${questions.length}`;
+  document.getElementById('qText').textContent=q.q;
+  const opts=document.getElementById('options');
+  opts.innerHTML='';
+  q.opts.forEach(o=>{
+    const el=document.createElement('div');
+    el.className='option';
+    el.textContent=o.t;
+    el.onclick=()=>selectOption(o.type,el);
+    opts.appendChild(el);
+  });
+}
+
+function selectOption(type,el){
+  document.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  scores[type]++;
+  setTimeout(()=>{
+    currentQ++;
+    if(currentQ>=questions.length){showResult()}
+    else{showQuestion()}
+  },500);
+}
+
+function showResult(){
+  const winner=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+  const r=results[winner];
+  document.getElementById('questionCard').style.display='none';
+  document.getElementById('progressFill').style.width='100%';
+  document.getElementById('rEmoji').textContent=r.emoji;
+  document.getElementById('rTitle').textContent=r.title;
+  document.getElementById('rDesc').textContent=r.desc;
+  const stats=document.getElementById('rStats');
+  stats.innerHTML='';
+  Object.entries(r.stats).forEach(([k,v])=>{
+    stats.innerHTML+=`<div class="r-stat"><div class="r-stat-label">${k.replace('_',' ')}</div><div class="r-stat-val">${v}</div></div>`;
+  });
+  document.getElementById('result').style.display='block';
+  setTimeout(()=>document.getElementById('result').classList.add('show'),50);
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playChip();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playChip(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [330,392,494,392].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.4);g.gain.linearRampToValueAtTime(.025,now+i*.4+.05);g.gain.linearRampToValueAtTime(0,now+i*.4+.35);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.4);o.stop(now+i*.4+.4);
+  });
+  setTimeout(playChip,3200);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+startQuiz();
+</script>
+</body>
+</html>

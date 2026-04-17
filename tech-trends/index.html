@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 Tech Trends 2026</title>
+<meta name="description" content="Interactive visualization of the hottest tech trends in 2026 with animated bubble chart.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;min-height:100vh;background:#0a0a14;color:#fff;overflow:hidden}
+canvas{display:block;position:fixed;top:0;left:0;cursor:pointer}
+.header{position:fixed;top:1.5rem;left:50%;transform:translateX(-50%);z-index:10;text-align:center}
+.header h1{font-size:clamp(1.5rem,4vw,2.5rem);font-weight:700;background:linear-gradient(135deg,#06b6d4,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:#555;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;margin-top:.3rem}
+.tooltip{position:fixed;z-index:20;padding:1.5rem;border-radius:16px;background:rgba(17,24,39,0.95);border:1px solid #333;backdrop-filter:blur(10px);max-width:300px;pointer-events:none;opacity:0;transition:opacity .3s;transform:translate(-50%,-110%)}
+.tooltip.visible{opacity:1}
+.tooltip-name{font-size:1.3rem;font-weight:700;margin-bottom:.3rem}
+.tooltip-bar{height:6px;background:#222;border-radius:99px;margin:.5rem 0;overflow:hidden}
+.tooltip-fill{height:100%;border-radius:99px;transition:width .5s}
+.tooltip-desc{font-size:.85rem;color:#888;line-height:1.6}
+.tooltip-stat{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.8rem;color:#666}
+.legend{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;font-size:.75rem;color:#666}
+.legend span{display:flex;align-items:center;gap:.3rem}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(17,24,39,0.8);border:2px solid #333;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;backdrop-filter:blur(5px)}
+.music-toggle:hover{border-color:#06b6d4;transform:scale(1.1)}
+.filter-btns{position:fixed;top:5rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:.3rem;flex-wrap:wrap;justify-content:center}
+.filter{padding:.4rem .8rem;border-radius:8px;border:1px solid #333;background:transparent;color:#666;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:.75rem;transition:all .3s}
+.filter:hover{border-color:#06b6d4}
+.filter.active{background:#06b6d422;border-color:#06b6d4;color:#06b6d4}
+</style>
+</head>
+<body>
+<canvas id="chart"></canvas>
+<div class="header"><h1>📊 Tech Trends 2026</h1><p>Interactive Bubble Chart • Hover to explore</p></div>
+<div class="filter-btns" id="filters"></div>
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-name" id="ttName"></div>
+  <div class="tooltip-bar"><div class="tooltip-fill" id="ttFill"></div></div>
+  <div class="tooltip-desc" id="ttDesc"></div>
+  <div class="tooltip-stat"><span>Growth: <span id="ttGrowth"></span></span><span>Hype: <span id="ttHype"></span></span></div>
+</div>
+<div class="legend">
+  <span><span class="legend-dot" style="background:#06b6d4"></span>AI & ML</span>
+  <span><span class="legend-dot" style="background:#a78bfa"></span>Web3</span>
+  <span><span class="legend-dot" style="background:#22c55e"></span>DevTools</span>
+  <span><span class="legend-dot" style="background:#f97316"></span>Cloud</span>
+  <span><span class="legend-dot" style="background:#ec4899"></span>Design</span>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('chart'),ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+const categories=['All','AI & ML','Web3','DevTools','Cloud','Design'];
+const catColors={'AI & ML':'#06b6d4','Web3':'#a78bfa','DevTools':'#22c55e','Cloud':'#f97316','Design':'#ec4899'};
+
+const trends=[
+  {name:"AI Agents",cat:"AI & ML",growth:95,hype:98,size:70,desc:"Autonomous AI agents that can browse, code, and complete tasks. The biggest paradigm shift since smartphones."},
+  {name:"Claude & Opus",cat:"AI & ML",growth:92,hype:95,size:65,desc:"Anthropic's models dominating coding, reasoning, and creative tasks. Claude 4.6 is the developer's best friend."},
+  {name:"Rust",cat:"DevTools",growth:75,hype:70,size:50,desc:"Memory-safe, blazing fast. Rust is eating C++'s lunch in systems programming, WebAssembly, and embedded."},
+  {name:"Solana",cat:"Web3",growth:60,hype:65,size:40,desc:"Fast, cheap, and growing. Solana's ecosystem is thriving with DeFi, NFTs, and DePIN."},
+  {name:"Vercel/Next.js",cat:"DevTools",growth:80,hype:75,size:55,desc:"The React meta-framework that powers half the internet. Server Components changed everything."},
+  {name:"Figma AI",cat:"Design",growth:85,hype:80,size:52,desc:"AI-powered design tools that turn prompts into pixel-perfect interfaces. Designers are now 10x faster."},
+  {name:"Kubernetes",cat:"Cloud",growth:65,hype:55,size:48,desc:"Container orchestration is table stakes. K8s runs everything from startups to Fortune 500."},
+  {name:"WebGPU",cat:"DevTools",growth:70,hype:72,size:42,desc:"Next-gen graphics API for the web. Enabling AAA gaming, ML inference, and visualization in browsers."},
+  {name:"MCP Protocol",cat:"AI & ML",growth:88,hype:85,size:55,desc:"Model Context Protocol — the USB-C of AI. Connecting models to tools, data, and the real world."},
+  {name:"Edge Computing",cat:"Cloud",growth:72,hype:68,size:45,desc:"Computation at the edge. Cloudflare Workers, Deno Deploy — millisecond latency everywhere."},
+  {name:"AR/XR Web",cat:"Design",growth:68,hype:78,size:40,desc:"WebXR and spatial computing coming to browsers. The metaverse is boring — spatial web is real."},
+  {name:"World Models",cat:"AI & ML",growth:90,hype:90,size:58,desc:"AI learning physics and reasoning about the 3D world. Video generation meets simulation."},
+  {name:"Tailwind CSS",cat:"Design",growth:60,hype:55,size:38,desc:"Utility-first CSS that everyone loves (or loves to hate). V4 is faster and more flexible."},
+  {name:"Serverless DBs",cat:"Cloud",growth:78,hype:70,size:45,desc:"PlanetScale, Neon, Turso — databases that scale to zero. Pay only for what you use."},
+  {name:"DePIN",cat:"Web3",growth:55,hype:60,size:35,desc:"Decentralized Physical Infrastructure. Real-world hardware networks powered by crypto incentives."},
+];
+
+let activeFilter='All';
+const filtersDiv=document.getElementById('filters');
+categories.forEach(c=>{
+  const btn=document.createElement('span');
+  btn.className='filter'+(c==='All'?' active':'');
+  btn.textContent=c;
+  btn.onclick=()=>{activeFilter=c;document.querySelectorAll('.filter').forEach(f=>f.classList.remove('active'));btn.classList.add('active');initBubbles()};
+  filtersDiv.appendChild(btn);
+});
+
+let bubbles=[];
+function initBubbles(){
+  const filtered=activeFilter==='All'?trends:trends.filter(t=>t.cat===activeFilter);
+  bubbles=filtered.map(t=>({
+    ...t,
+    x:Math.random()*W*.6+W*.2,
+    y:Math.random()*H*.5+H*.25,
+    vx:(Math.random()-.5)*.5,
+    vy:(Math.random()-.5)*.5,
+    targetR:t.size*Math.min(W,H)/800,
+    r:0,
+    color:catColors[t.cat],
+  }));
+}
+initBubbles();
+
+let hoveredBubble=null;
+canvas.addEventListener('mousemove',e=>{
+  const mx=e.clientX,my=e.clientY;
+  hoveredBubble=null;
+  bubbles.forEach(b=>{
+    const d=Math.sqrt((mx-b.x)**2+(my-b.y)**2);
+    if(d<b.r){hoveredBubble=b}
+  });
+
+  const tt=document.getElementById('tooltip');
+  if(hoveredBubble){
+    tt.style.left=hoveredBubble.x+'px';
+    tt.style.top=(hoveredBubble.y-hoveredBubble.r)+'px';
+    document.getElementById('ttName').textContent=hoveredBubble.name;
+    document.getElementById('ttName').style.color=hoveredBubble.color;
+    document.getElementById('ttFill').style.width=hoveredBubble.growth+'%';
+    document.getElementById('ttFill').style.background=hoveredBubble.color;
+    document.getElementById('ttDesc').textContent=hoveredBubble.desc;
+    document.getElementById('ttGrowth').textContent=hoveredBubble.growth+'%';
+    document.getElementById('ttHype').textContent=hoveredBubble.hype+'/100';
+    tt.classList.add('visible');
+  } else {
+    tt.classList.remove('visible');
+  }
+});
+
+function animate(){
+  ctx.fillStyle='rgba(10,10,20,0.15)';ctx.fillRect(0,0,W,H);
+
+  bubbles.forEach(b=>{
+    b.r+=(b.targetR-b.r)*0.05;
+    b.x+=b.vx;b.y+=b.vy;
+
+    // Boundary bounce
+    if(b.x-b.r<0||b.x+b.r>W)b.vx*=-1;
+    if(b.y-b.r<100||b.y+b.r>H-60)b.vy*=-1;
+
+    // Bubble collision
+    bubbles.forEach(other=>{
+      if(other===b)return;
+      const dx=other.x-b.x,dy=other.y-b.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const minDist=b.r+other.r;
+      if(dist<minDist){
+        const angle=Math.atan2(dy,dx);
+        const overlap=minDist-dist;
+        b.x-=Math.cos(angle)*overlap*.5;
+        b.y-=Math.sin(angle)*overlap*.5;
+        other.x+=Math.cos(angle)*overlap*.5;
+        other.y+=Math.sin(angle)*overlap*.5;
+        b.vx*=-0.5;b.vy*=-0.5;
+        other.vx*=-0.5;other.vy*=-0.5;
+      }
+    });
+
+    const isHovered=hoveredBubble===b;
+
+    // Glow
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*1.5,0,Math.PI*2);
+    const glow=ctx.createRadialGradient(b.x,b.y,b.r*.5,b.x,b.y,b.r*1.5);
+    glow.addColorStop(0,b.color+'22');glow.addColorStop(1,'transparent');
+    ctx.fillStyle=glow;ctx.fill();
+
+    // Body
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fillStyle=isHovered?b.color+'44':b.color+'22';
+    ctx.strokeStyle=isHovered?b.color:b.color+'66';
+    ctx.lineWidth=isHovered?3:1.5;
+    ctx.fill();ctx.stroke();
+
+    // Label
+    ctx.font=`${isHovered?'bold ':''}${Math.max(10,b.r*.35)}px Space Grotesk`;
+    ctx.fillStyle=isHovered?'#fff':'#ccc';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(b.name,b.x,b.y);
+
+    // Growth percentage
+    if(b.r>25){
+      ctx.font=`${Math.max(8,b.r*.2)}px Space Grotesk`;
+      ctx.fillStyle=b.color+'88';
+      ctx.fillText(b.growth+'%',b.x,b.y+b.r*.35);
+    }
+  });
+
+  requestAnimationFrame(animate);
+}
+animate();
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playTech();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playTech(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [196,261.63,329.63,392,329.63,261.63].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.7);g.gain.linearRampToValueAtTime(.03,now+i*.7+.1);g.gain.linearRampToValueAtTime(0,now+i*.7+.65);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.7);o.stop(now+i*.7+.7);
+  });
+  setTimeout(playTech,4200);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

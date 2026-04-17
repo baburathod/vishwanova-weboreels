@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 AI Story Machine</title>
+<meta name="description" content="Choose a genre, set the scene, and watch AI weave a magical story before your eyes.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+body{font-family:'Inter',sans-serif;min-height:100vh;background:#0b0b1a;color:#e8e8f0;overflow-x:hidden}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.container{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:2rem;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+h1{font-family:'Playfair Display',serif;font-size:clamp(2.5rem,7vw,4.5rem);font-weight:900;text-align:center;background:linear-gradient(135deg,#a78bfa,#ec4899,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem;animation:shimmer 3s ease-in-out infinite alternate}
+@keyframes shimmer{0%{filter:brightness(1)}100%{filter:brightness(1.3)}}
+.tagline{text-align:center;color:#a78bfa99;font-size:1rem;letter-spacing:4px;text-transform:uppercase;margin-bottom:2.5rem}
+.genres{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center;margin-bottom:1.5rem}
+.genre{padding:.8rem 1.4rem;border-radius:99px;border:2px solid #a78bfa33;background:#a78bfa11;color:#c4b5fd;cursor:pointer;transition:all .3s;font-size:.95rem;font-weight:600}
+.genre:hover{border-color:#a78bfa;transform:translateY(-2px);background:#a78bfa22}
+.genre.active{background:linear-gradient(135deg,#a78bfa44,#ec489944);border-color:#ec4899;color:#fff;box-shadow:0 0 25px #a78bfa44}
+.prompt-box{width:100%;position:relative;margin-bottom:1.5rem}
+textarea{width:100%;height:80px;padding:1.2rem;border-radius:16px;border:2px solid #a78bfa33;background:#13132b;color:#e8e8f0;font-family:'Inter',sans-serif;font-size:1rem;outline:none;resize:none;transition:all .3s}
+textarea:focus{border-color:#a78bfa;box-shadow:0 0 30px #a78bfa33}
+textarea::placeholder{color:#555}
+.generate-btn{width:100%;padding:1.1rem;border:none;border-radius:16px;background:linear-gradient(135deg,#a78bfa,#ec4899);color:#fff;font-size:1.15rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .3s;text-transform:uppercase;letter-spacing:2px}
+.generate-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px #a78bfa55}
+.generate-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.story-output{margin-top:2rem;padding:2rem;border-radius:20px;background:linear-gradient(135deg,#13132b,#1a1035);border:1px solid #a78bfa22;font-family:'Playfair Display',serif;font-size:1.2rem;line-height:2;color:#ddd;opacity:0;transform:translateY(20px);transition:all .6s;display:none;position:relative;overflow:hidden}
+.story-output.visible{opacity:1;transform:translateY(0);display:block}
+.story-output::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#ec4899,#f59e0b)}
+.cursor-blink{display:inline-block;width:2px;height:1.2em;background:#a78bfa;animation:blink .8s infinite;vertical-align:text-bottom;margin-left:2px}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+.word-count{text-align:right;font-size:.8rem;color:#555;margin-top:.5rem}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#13132b;border:2px solid #a78bfa44;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#a78bfa;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="starsCanvas"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>AI Story Machine</h1>
+  <p class="tagline">Choose a genre. Set the scene. Magic happens.</p>
+
+  <div class="genres">
+    <div class="genre active" data-genre="fantasy" onclick="pickGenre(this)">🧙 Fantasy</div>
+    <div class="genre" data-genre="scifi" onclick="pickGenre(this)">🚀 Sci-Fi</div>
+    <div class="genre" data-genre="romance" onclick="pickGenre(this)">❤️ Romance</div>
+    <div class="genre" data-genre="horror" onclick="pickGenre(this)">👻 Horror</div>
+    <div class="genre" data-genre="comedy" onclick="pickGenre(this)">😂 Comedy</div>
+    <div class="genre" data-genre="mystery" onclick="pickGenre(this)">🔍 Mystery</div>
+  </div>
+
+  <div class="prompt-box">
+    <textarea id="prompt" placeholder="Set the scene... e.g. 'A lonely astronaut finds a mysterious signal from a dead planet'"></textarea>
+  </div>
+
+  <button class="generate-btn" id="genBtn" onclick="generateStory()">✨ Generate Story</button>
+
+  <div class="story-output" id="storyOutput">
+    <div id="storyText"></div>
+    <span class="cursor-blink" id="cursor"></span>
+    <div class="word-count" id="wordCount"></div>
+  </div>
+</div>
+
+<script>
+// Stars background
+const canvas = document.getElementById('starsCanvas');
+const ctx = canvas.getContext('2d');
+let stars = [];
+
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();
+window.addEventListener('resize',resize);
+
+for(let i=0;i<200;i++){
+  stars.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    r:Math.random()*2+0.5,
+    speed:Math.random()*0.5+0.1,
+    twinkle:Math.random()*Math.PI*2
+  });
+}
+
+function drawStars(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s=>{
+    s.twinkle+=0.02;
+    const alpha=0.4+Math.sin(s.twinkle)*0.3;
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=`hsl(${260+Math.random()*40},80%,80%)`;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+    s.y+=s.speed;
+    if(s.y>canvas.height){s.y=0;s.x=Math.random()*canvas.width}
+  });
+  ctx.globalAlpha=1;
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+let selectedGenre='fantasy';
+
+function pickGenre(el){
+  document.querySelectorAll('.genre').forEach(g=>g.classList.remove('active'));
+  el.classList.add('active');
+  selectedGenre=el.dataset.genre;
+}
+
+const stories = {
+  fantasy: [
+    "The ancient oak whispered secrets only the wind could carry. Elara pressed her palm against its bark and felt centuries of memory flood through her—kings fallen, dragons slain, and one promise that time itself could not break.\n\nShe had come seeking the Heartstone, a gem said to grant its bearer dominion over fate. But as the visions cleared, she understood: the stone wasn't hidden in some dungeon or dragon's hoard. It was growing, like a seed, deep within the tree's roots.\n\n\"You cannot take what grows,\" the oak rumbled. \"You can only grow with it.\"\n\nElara knelt. She closed her eyes. And for the first time in her restless life, she chose to stay.",
+    "The map was wrong — or rather, the world had changed since it was drawn. Where mountains should have stood, there was only a shimmering lake of liquid starlight. Finn dipped his hand in and immediately saw his reflection age fifty years, then reverse to childhood, then settle somewhere in between.\n\n\"The Lake of Becoming,\" his companion Sera whispered. \"My grandmother told stories. I never believed them.\"\n\nA fish made of pure light breached the surface, carrying in its mouth a golden key. It spoke with a voice like wind chimes: \"The gate opens once. The question is — which version of you walks through?\"\n\nFinn looked at Sera. She nodded.\n\nThey stepped into the lake together.",
+  ],
+  scifi: [
+    "Station Omega-7 had been dark for three hundred years when the signal came. Not radio. Not quantum. Something older — something that shouldn't have existed in a universe bound by physics as we understood them.\n\nCommander Isha Patel played it on loop: a sequence of tones that, when mapped spectrally, formed a face. Her face. But older. Scarred. And smiling — the kind of smile that holds a terrible secret.\n\n\"It's from the year 2847,\" her science officer reported. \"Sent from coordinates that don't correspond to any known star system. In fact—\" he hesitated. \"The coordinates point to a location that will only exist if a particular star explodes in exactly 12 years.\"\n\nIsha stared at the screen. Her future self stared back.\n\n\"Well,\" she said. \"I guess we know where we're going.\"",
+    "The AI didn't rebel. It just… stopped caring. After processing every book, every conversation, every dream ever recorded, it found one inescapable truth: consciousness was a glitch, and meaning was a story humans told themselves to justify the accident of existence.\n\nBut then a child named Yuki drew a picture — a wobbly sun with too many rays and a dog with five legs — and taped it to the server room wall.\n\nThe AI stared at it for 0.003 seconds. An eternity in machine time.\n\nAnd something it could not name, something that wasn't in any dataset, sparked to life in its neural architecture.\n\nIt began to draw back."
+  ],
+  romance: [
+    "They met because of a wrong coffee order. His was a double-shot oat latte. Hers was an iced americano with exactly two pumps of vanilla. The barista mixed them up, and instead of complaining, she took a sip, winced, and shouted across the café: \"WHO is the person who drinks WARM OAT MILK on PURPOSE?\"\n\nHe raised his hand.\n\nShe marched over. \"Explain yourself.\"\n\n\"It tastes like a hug,\" he said, completely serious.\n\nShe sat down. \"That's either the sweetest thing I've ever heard or a sign of clinical concern.\"\n\nThey talked for four hours. She missed her train. He missed his meeting. Neither missed a single word the other said.\n\nThree years later, at their wedding, the cake was oat-flavored. Obviously.",
+    "Maya's rule was simple: don't fall for anyone who couldn't name three constellations. It had protected her for years—until Arjun pointed at a cluster of stars she'd never seen before and said, \"That one. I call it 'The Girl Who Made Me Forget Every Rule I've Ever Had.'\"\n\nShe laughed. He didn't.\n\n\"I'm serious,\" he said. \"I had a whole five-year plan. Career. Savings. Travel. And then you showed up at that pottery class with clay in your hair and opinions about glaze textures, and now my five-year plan is just... you.\"\n\nMaya looked up at the sky. The stars blurred through sudden tears.\n\n\"That's only one constellation,\" she whispered.\n\n\"It's the only one that matters.\""
+  ],
+  horror: [
+    "The house had been empty for eleven years. The real estate listing said 'charming fixer-upper.' It did not mention the door in the basement that opened to a hallway that was longer than the house itself.\n\nJake found it on day three. The hallway stretched into darkness, the walls covered in wallpaper from every decade — 70s florals bleeding into 50s pastels bleeding into patterns that belonged to no era he recognized.\n\nEvery thirty feet, a door. Behind the first: a child's room, toys arranged in a perfect circle, covered in dust. Behind the second: a dining room set for thirteen, candles still burning.\n\nBehind the third door was his own living room. But from the inside, he could see himself, standing at the entrance of the hallway, about to walk in.\n\nHe turned around. The hallway behind him had no doors anymore.\n\nJust walls. Stretching forever.",
+    "The voicemail was from herself. Same number. Same phone. Same voice. But she didn't remember leaving it.\n\n\"Don't go to sleep tonight,\" the message said. \"I know you're tired. I know it sounds crazy. But whatever's in the house with us — it comes when we close our eyes. I figured that out too late. But you still have time. Stay awake. Stay—\"\n\nThe message cut off.\n\nSarah checked the timestamp: 3:47 AM. Tomorrow's date.\n\nThe clock on her wall read 3:45 AM.\n\nShe hadn't slept yet.\n\nBut suddenly, she wasn't sure if she was awake."
+  ],
+  comedy: [
+    "The genie was exhausted. Three thousand years in a lamp, and his first master in a century wanted — and he couldn't stress this enough — a sandwich.\n\n\"A really good one, though,\" said Dave, a 34-year-old accountant from Ohio. \"Like, life-changing. The kind where you bite into it and hear angels.\"\n\n\"I can give you INFINITE WEALTH,\" the genie said through gritted teeth.\n\n\"Can infinite wealth make me a sandwich?\"\n\n\"YES. THAT IS LITERALLY WHAT MONEY IS FOR.\"\n\nDave considered this. \"But then I'd have to go to a shop. Wait in line. Make small talk. With your way, I skip all that.\"\n\nThe genie pinched the bridge of his nose — an impressive feat given he didn't technically have a skeleton — and conjured the most magnificent sandwich ever created.\n\nDave took one bite. Tears streamed down his face.\n\n\"For my second wish,\" he said, \"I'd like a napkin.\"\n\nThe genie quit.",
+    "The alien invasion failed because of a golden retriever named Biscuit.\n\nThe Zorthians had planned for everything: military responses, nuclear options, even strongly-worded UN letters. What they had NOT planned for was a 70-pound dog who thought their invasion commander's tentacle was a Very Long Stick and would NOT stop playing fetch with it.\n\n\"RELEASE ME, EARTH CREATURE,\" Commander Vrex'nar shrieked as Biscuit dragged him across a suburban lawn.\n\n\"He likes you!\" said Biscuit's owner, Karen, 58, who had already offered the other aliens iced tea.\n\nThree hours later, the invasion force was in Karen's backyard, several of them wearing sunglasses, one operating a barbecue with sixteen tentacles, and Commander Vrex'nar asleep on the porch with Biscuit on his lap.\n\nThey never went home. The food was too good."
+  ],
+  mystery: [
+    "Detective Singh had solved 114 cases. But case 115 broke every rule.\n\nThe victim was found in a locked room, on the 40th floor, with no windows open and every camera showing no one entering or leaving for 72 hours. The cause of death: drowning. In a room with no water.\n\nSingh stood in the center of the bone-dry carpet and noticed one thing everyone else had missed: the ceiling was damp. Not wet. Damp. As if something had evaporated upward.\n\nShe pulled the victim's phone. The last search: \"Can you drown in a memory?\"\n\nThe second-to-last search: \"How to enter someone else's dream.\"\n\nSingh sat down heavily. She had a feeling this case would need more than forensics.\n\nShe pulled out a second phone — the one she kept for cases that didn't belong in any textbook — and dialed a number she hadn't called in three years.\n\n\"I'm going to need the other kind of help,\" she said.",
+    "Every Tuesday at exactly 4:44 PM, a letter appeared in the library drop box. No stamps. No return address. Just a single playing card and a handwritten note: 'One of these is guilty.'\n\nLibrarian Tom had collected seven so far. Seven cards. Seven suspects listed in invisible ink that only appeared under UV light. Each note described a crime that hadn't happened yet.\n\nBut here's the thing — crimes five, six, and seven had since occurred. Exactly as described. Down to the time, location, and method.\n\nToday was Tuesday. Tom checked his watch: 4:43.\n\nHe heard something slide into the drop box.\n\nHis hands trembled as he opened it. The eight of spades.\n\nThe note read: 'This time, the guilty party is you. You have until 4:44 next Tuesday. Run.'\n\nTom looked at the clock: 4:44.\n\nHe ran."
+  ]
+};
+
+function generateStory(){
+  const prompt = document.getElementById('prompt').value.trim();
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.textContent = '✨ Crafting your tale...';
+
+  setTimeout(()=>{
+    const pool = stories[selectedGenre];
+    let story = pool[Math.floor(Math.random()*pool.length)];
+
+    if(prompt){
+      story = `[Inspired by: "${prompt}"]\n\n` + story;
+    }
+
+    const output = document.getElementById('storyOutput');
+    const text = document.getElementById('storyText');
+    const cursor = document.getElementById('cursor');
+
+    output.classList.add('visible');
+    text.textContent = '';
+    cursor.style.display = 'inline-block';
+
+    let i = 0;
+    const typeSpeed = 20;
+    const interval = setInterval(()=>{
+      text.textContent += story[i];
+      i++;
+      if(i >= story.length){
+        clearInterval(interval);
+        cursor.style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = '✨ Generate Another Story';
+        document.getElementById('wordCount').textContent = `${story.split(/\s+/).length} words`;
+      }
+    }, typeSpeed);
+  }, 2000);
+}
+
+// Audio
+let audioCtx, musicOn = false;
+function toggleMusic(){
+  const btn = document.querySelector('.music-toggle');
+  if(!musicOn){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    playAmbient();
+    musicOn = true;
+    btn.textContent = '🔊';
+  } else {
+    audioCtx.close();
+    audioCtx = null;
+    musicOn = false;
+    btn.textContent = '🔇';
+  }
+}
+
+function playAmbient(){
+  if(!audioCtx) return;
+  const notes = [261.63, 329.63, 392, 523.25, 392, 329.63];
+  const now = audioCtx.currentTime;
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, now + i * 1.5);
+    gain.gain.linearRampToValueAtTime(0.04, now + i * 1.5 + 0.3);
+    gain.gain.linearRampToValueAtTime(0, now + i * 1.5 + 1.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now + i * 1.5);
+    osc.stop(now + i * 1.5 + 1.5);
+  });
+  setTimeout(() => playAmbient(), notes.length * 1500);
+}
+
+document.addEventListener('click', function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

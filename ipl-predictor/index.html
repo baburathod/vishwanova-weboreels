@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏏 IPL 2026 Predictor</title>
+<meta name="description" content="Vote for your IPL 2026 winner! Live prediction wall with team stats.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+body{font-family:'Outfit',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0a0a1a,#1a0a2e);color:#fff;overflow-x:hidden;padding:1.5rem}
+.container{max-width:700px;margin:0 auto}
+h1{font-size:clamp(2rem,6vw,3.5rem);font-weight:900;text-align:center;background:linear-gradient(135deg,#fbbf24,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+.sub{text-align:center;color:#fbbf2444;letter-spacing:3px;text-transform:uppercase;font-size:.8rem;margin-bottom:2rem}
+.teams-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;margin-bottom:2rem}
+@media(max-width:500px){.teams-grid{grid-template-columns:1fr}}
+.team-card{padding:1.2rem;border-radius:16px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;border:2px solid transparent}
+.team-card:hover{transform:translateY(-3px)}
+.team-card.voted{border-width:3px}
+.team-header{display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem}
+.team-emoji{font-size:2rem}
+.team-name{font-size:1.1rem;font-weight:800}
+.team-city{font-size:.75rem;color:rgba(255,255,255,.5)}
+.vote-bar{height:6px;background:rgba(0,0,0,.3);border-radius:99px;overflow:hidden;margin-top:.5rem}
+.vote-fill{height:100%;border-radius:99px;transition:width 1s ease;background:#fff}
+.vote-count{font-size:.8rem;color:rgba(255,255,255,.6);margin-top:.3rem;display:flex;justify-content:space-between}
+.prediction-wall{padding:1.5rem;border-radius:16px;background:#111827;border:1px solid #1e293b;margin-bottom:1.5rem}
+.wall-title{font-size:.8rem;color:#666;letter-spacing:2px;margin-bottom:1rem;text-transform:uppercase}
+.stickies{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;max-height:200px;overflow-y:auto}
+.sticky{padding:.5rem .8rem;border-radius:8px;font-size:.8rem;transform:rotate(var(--rotate,0deg));transition:all .3s}
+.sticky:hover{transform:rotate(0deg) scale(1.1);z-index:2}
+.add-prediction{display:flex;gap:.5rem;margin-top:1rem}
+.add-prediction input{flex:1;padding:.7rem 1rem;border-radius:10px;border:2px solid #1e293b;background:#0a0a14;color:#fff;font-family:'Outfit',sans-serif;outline:none}
+.add-prediction input:focus{border-color:#fbbf24}
+.add-prediction button{padding:.7rem 1rem;border-radius:10px;border:none;background:#fbbf24;color:#000;font-family:'Outfit',sans-serif;font-weight:700;cursor:pointer}
+.total-votes{text-align:center;font-size:1rem;color:#fbbf24;margin-top:1rem}
+.music-toggle{position:fixed;top:1rem;right:1rem;z-index:100;background:#111827;border:2px solid #fbbf2444;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s}
+.music-toggle:hover{border-color:#fbbf24;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>🏏 IPL 2026</h1>
+  <p class="sub">Who will win? Cast your vote!</p>
+
+  <div class="teams-grid" id="teams"></div>
+  <div class="total-votes" id="totalVotes"></div>
+
+  <div class="prediction-wall">
+    <div class="wall-title">🗳️ Prediction Wall</div>
+    <div class="stickies" id="stickies"></div>
+    <div class="add-prediction">
+      <input type="text" id="predInput" placeholder="Your prediction / reason...">
+      <button onclick="addPrediction()">Post</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const teams=[
+  {name:"Mumbai Indians",city:"Mumbai",emoji:"🔵",color:"#004ba0",bg:"#004ba022",border:"#004ba0"},
+  {name:"Chennai Super Kings",city:"Chennai",emoji:"🦁",color:"#fbbf24",bg:"#fbbf2422",border:"#fbbf24"},
+  {name:"Royal Challengers",city:"Bengaluru",emoji:"🔴",color:"#ef4444",bg:"#ef444422",border:"#ef4444"},
+  {name:"Kolkata Knight Riders",city:"Kolkata",emoji:"💜",color:"#7c3aed",bg:"#7c3aed22",border:"#7c3aed"},
+  {name:"Rajasthan Royals",city:"Jaipur",emoji:"💗",color:"#ec4899",bg:"#ec489922",border:"#ec4899"},
+  {name:"Delhi Capitals",city:"Delhi",emoji:"🔷",color:"#3b82f6",bg:"#3b82f622",border:"#3b82f6"},
+  {name:"Sunrisers Hyderabad",city:"Hyderabad",emoji:"🧡",color:"#f97316",bg:"#f9731622",border:"#f97316"},
+  {name:"Gujarat Titans",city:"Ahmedabad",emoji:"⚡",color:"#14b8a6",bg:"#14b8a622",border:"#14b8a6"},
+  {name:"Punjab Kings",city:"Mohali",emoji:"❤️",color:"#dc2626",bg:"#dc262622",border:"#dc2626"},
+  {name:"Lucknow Super Giants",city:"Lucknow",emoji:"💙",color:"#06b6d4",bg:"#06b6d422",border:"#06b6d4"},
+];
+
+let votes=JSON.parse(localStorage.getItem('iplVotes')||'{}');
+let userVote=localStorage.getItem('iplUserVote');
+let predictions=JSON.parse(localStorage.getItem('iplPredictions')||'[]');
+
+// Init votes
+teams.forEach(t=>{if(!votes[t.name])votes[t.name]=Math.floor(Math.random()*50+10)});
+
+function render(){
+  const total=Object.values(votes).reduce((s,v)=>s+v,0);
+  const grid=document.getElementById('teams');
+  grid.innerHTML='';
+
+  // Sort by votes
+  const sorted=[...teams].sort((a,b)=>(votes[b.name]||0)-(votes[a.name]||0));
+
+  sorted.forEach(t=>{
+    const v=votes[t.name]||0;
+    const pct=total?Math.round(v/total*100):0;
+    const card=document.createElement('div');
+    card.className='team-card'+(userVote===t.name?' voted':'');
+    card.style.background=t.bg;
+    card.style.borderColor=userVote===t.name?t.border:'transparent';
+    card.innerHTML=`
+      <div class="team-header">
+        <div class="team-emoji">${t.emoji}</div>
+        <div><div class="team-name" style="color:${t.color}">${t.name}</div><div class="team-city">${t.city}</div></div>
+      </div>
+      <div class="vote-bar"><div class="vote-fill" style="width:${pct}%;background:${t.color}"></div></div>
+      <div class="vote-count"><span>${v} votes</span><span>${pct}%</span></div>`;
+    card.onclick=()=>voteTeam(t.name);
+    grid.appendChild(card);
+  });
+
+  document.getElementById('totalVotes').textContent=`🗳️ ${total} total votes cast`;
+  renderPredictions();
+}
+
+function voteTeam(name){
+  if(userVote){votes[userVote]=Math.max(0,(votes[userVote]||0)-1)}
+  votes[name]=(votes[name]||0)+1;
+  userVote=name;
+  localStorage.setItem('iplVotes',JSON.stringify(votes));
+  localStorage.setItem('iplUserVote',name);
+  render();
+}
+
+function renderPredictions(){
+  const div=document.getElementById('stickies');
+  div.innerHTML='';
+  const defaultPreds=[
+    {text:"MI has the strongest squad this year! 💪",team:"Mumbai Indians"},
+    {text:"CSK — Dhoni's last season energy ❤️",team:"Chennai Super Kings"},
+    {text:"RCB finally breaks the jinx 🙏",team:"Royal Challengers"},
+    {text:"KKR repeat champions! Purple army 💜",team:"Kolkata Knight Riders"},
+    {text:"Virat to score 1000 runs this IPL 🔥",team:"Royal Challengers"},
+    {text:"Jasprit Bumrah MVP no doubt 🎯",team:"Mumbai Indians"},
+  ];
+  const allPreds=[...predictions,...defaultPreds].slice(0,30);
+  allPreds.forEach(p=>{
+    const team=teams.find(t=>t.name===p.team);
+    const sticky=document.createElement('div');
+    sticky.className='sticky';
+    sticky.style.background=(team?team.bg:'#fbbf2422');
+    sticky.style.color=(team?team.color:'#fbbf24');
+    sticky.style.setProperty('--rotate',(Math.random()*6-3)+'deg');
+    sticky.textContent=p.text;
+    div.appendChild(sticky);
+  });
+}
+
+function addPrediction(){
+  const text=document.getElementById('predInput').value.trim();
+  if(!text)return;
+  predictions.unshift({text,team:userVote||'Mumbai Indians'});
+  localStorage.setItem('iplPredictions',JSON.stringify(predictions));
+  document.getElementById('predInput').value='';
+  render();
+}
+
+document.getElementById('predInput').addEventListener('keydown',e=>{if(e.key==='Enter')addPrediction()});
+render();
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playStadium();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playStadium(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // Energetic beat
+  [196,261.63,329.63,392,329.63,261.63,196,261.63].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.3);g.gain.linearRampToValueAtTime(.04,now+i*.3+.05);g.gain.linearRampToValueAtTime(0,now+i*.3+.25);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.3);o.stop(now+i*.3+.3);
+  });
+  // Kick
+  const k=audioCtx.createOscillator(),kg=audioCtx.createGain();
+  k.frequency.setValueAtTime(150,now);k.frequency.exponentialRampToValueAtTime(30,now+.1);
+  kg.gain.setValueAtTime(.2,now);kg.gain.exponentialRampToValueAtTime(.001,now+.15);
+  k.connect(kg);kg.connect(audioCtx.destination);k.start(now);k.stop(now+.15);
+  setTimeout(playStadium,2400);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

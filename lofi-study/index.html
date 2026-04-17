@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Lo-Fi Study Room</title>
+<meta name="description" content="A cozy lo-fi study room with Pomodoro timer, ambient sounds, and chill vibes.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;min-height:100vh;background:#1a1520;color:#e8d5b5;overflow-x:hidden;display:flex;align-items:center;justify-content:center}
+.room{max-width:700px;width:95%;padding:2rem;position:relative}
+.window{width:100%;aspect-ratio:16/9;border-radius:20px;background:linear-gradient(180deg,#1a0a2e 0%,#2d1b4e 30%,#4a2d6e 60%,#6b3fa0 100%);position:relative;overflow:hidden;margin-bottom:2rem;border:3px solid #2a2035}
+.moon{position:absolute;top:15%;right:20%;width:60px;height:60px;border-radius:50%;background:#fef3c7;box-shadow:0 0 40px #fef3c766,0 0 80px #fef3c733}
+.star{position:absolute;width:3px;height:3px;background:#fef3c7;border-radius:50%;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.3}50%{opacity:1}}
+.cloud{position:absolute;background:#ffffff08;border-radius:50%;animation:drift 20s linear infinite}
+@keyframes drift{from{transform:translateX(-100px)}to{transform:translateX(calc(100% + 200px))}}
+.rain{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.raindrop{position:absolute;width:1px;height:15px;background:linear-gradient(transparent,#a78bfa33);animation:fall linear infinite}
+@keyframes fall{from{transform:translateY(-20px)}to{transform:translateY(100%)}opacity:0}
+
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+@media(max-width:500px){.controls{grid-template-columns:1fr}}
+.card{padding:1.5rem;border-radius:16px;background:#221a2e;border:1px solid #2a2035;text-align:center}
+.card-title{font-size:.75rem;color:#a78bfa88;text-transform:uppercase;letter-spacing:2px;margin-bottom:.8rem}
+.timer-display{font-size:3rem;font-weight:700;color:#e8d5b5;margin-bottom:.8rem}
+.timer-btn{padding:.5rem 1.5rem;border-radius:10px;border:none;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;transition:all .3s;margin:.2rem}
+.timer-btn:hover{transform:translateY(-2px)}
+.timer-btn.secondary{background:transparent;border:1.5px solid #a78bfa33;color:#a78bfa}
+.sounds{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+.sound-btn{padding:.5rem .8rem;border-radius:10px;border:1.5px solid #2a2035;background:transparent;color:#888;cursor:pointer;font-size:.85rem;transition:all .3s;font-family:'Space Grotesk',sans-serif}
+.sound-btn:hover{border-color:#a78bfa}
+.sound-btn.active{background:#a78bfa22;border-color:#a78bfa;color:#e8d5b5}
+.todo{padding:1.5rem;border-radius:16px;background:#221a2e;border:1px solid #2a2035}
+.todo-title{font-size:.75rem;color:#a78bfa88;text-transform:uppercase;letter-spacing:2px;margin-bottom:.8rem}
+.todo-input{display:flex;gap:.5rem;margin-bottom:.8rem}
+.todo-input input{flex:1;padding:.6rem .8rem;border-radius:8px;border:1.5px solid #2a2035;background:#1a1520;color:#e8d5b5;font-family:'Space Grotesk',sans-serif;outline:none}
+.todo-input input:focus{border-color:#a78bfa}
+.todo-add{padding:.6rem .8rem;border-radius:8px;border:none;background:#a78bfa;color:#fff;cursor:pointer;font-family:'Space Grotesk',sans-serif}
+.todo-list{list-style:none;max-height:150px;overflow-y:auto}
+.todo-item{padding:.4rem 0;display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:#aaa;cursor:pointer}
+.todo-item.done{text-decoration:line-through;color:#555}
+.todo-item::before{content:'○';color:#a78bfa}
+.todo-item.done::before{content:'●';color:#22c55e}
+.sessions{text-align:center;padding:.5rem;font-size:.8rem;color:#555}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#221a2e;border:2px solid #a78bfa44;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#a78bfa;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="room">
+  <div class="window" id="window">
+    <div class="moon"></div>
+    <div class="rain" id="rain"></div>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <div class="card-title">🍅 Pomodoro Timer</div>
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <div>
+        <button class="timer-btn" onclick="startTimer()">▶ Start</button>
+        <button class="timer-btn secondary" onclick="resetTimer()">⏹ Reset</button>
+      </div>
+      <div style="margin-top:.5rem">
+        <button class="timer-btn secondary" onclick="setTime(25)">25m</button>
+        <button class="timer-btn secondary" onclick="setTime(5)">5m</button>
+        <button class="timer-btn secondary" onclick="setTime(15)">15m</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎧 Ambient Sounds</div>
+      <div class="sounds">
+        <span class="sound-btn" data-sound="rain" onclick="toggleSound(this)">🌧️ Rain</span>
+        <span class="sound-btn" data-sound="fire" onclick="toggleSound(this)">🔥 Fire</span>
+        <span class="sound-btn" data-sound="birds" onclick="toggleSound(this)">🐦 Birds</span>
+        <span class="sound-btn" data-sound="wind" onclick="toggleSound(this)">💨 Wind</span>
+        <span class="sound-btn" data-sound="cafe" onclick="toggleSound(this)">☕ Café</span>
+        <span class="sound-btn" data-sound="waves" onclick="toggleSound(this)">🌊 Waves</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="todo">
+    <div class="todo-title">📝 Study Tasks</div>
+    <div class="todo-input">
+      <input type="text" id="todoInput" placeholder="Add a task...">
+      <button class="todo-add" onclick="addTodo()">+</button>
+    </div>
+    <ul class="todo-list" id="todoList"></ul>
+  </div>
+  <div class="sessions" id="sessions">🍅 0 sessions completed today</div>
+</div>
+
+<script>
+// Stars
+const win=document.getElementById('window');
+for(let i=0;i<20;i++){const s=document.createElement('div');s.className='star';s.style.left=Math.random()*90+'%';s.style.top=Math.random()*60+'%';s.style.animationDelay=Math.random()*3+'s';win.appendChild(s)}
+
+// Raindrops
+const rain=document.getElementById('rain');
+for(let i=0;i<30;i++){const d=document.createElement('div');d.className='raindrop';d.style.left=Math.random()*100+'%';d.style.animationDuration=(Math.random()*.5+.5)+'s';d.style.animationDelay=Math.random()*2+'s';rain.appendChild(d)}
+
+// Clouds
+for(let i=0;i<3;i++){const c=document.createElement('div');c.className='cloud';c.style.width=(Math.random()*100+80)+'px';c.style.height=(Math.random()*30+20)+'px';c.style.top=(Math.random()*40+5)+'%';c.style.animationDuration=(Math.random()*15+15)+'s';c.style.animationDelay=(-Math.random()*20)+'s';win.appendChild(c)}
+
+// Timer
+let timerMinutes=25,timerSeconds=0,timerRunning=false,timerInterval=null,sessions=parseInt(localStorage.getItem('pomodoroSessions')||'0');
+document.getElementById('sessions').textContent=`🍅 ${sessions} sessions completed today`;
+
+function updateTimerDisplay(){
+  document.getElementById('timerDisplay').textContent=`${timerMinutes.toString().padStart(2,'0')}:${timerSeconds.toString().padStart(2,'0')}`;
+}
+
+function setTime(m){timerMinutes=m;timerSeconds=0;clearInterval(timerInterval);timerRunning=false;updateTimerDisplay()}
+
+function startTimer(){
+  if(timerRunning)return;
+  timerRunning=true;
+  timerInterval=setInterval(()=>{
+    if(timerSeconds===0){
+      if(timerMinutes===0){
+        clearInterval(timerInterval);timerRunning=false;
+        sessions++;localStorage.setItem('pomodoroSessions',sessions);
+        document.getElementById('sessions').textContent=`🍅 ${sessions} sessions completed today`;
+        playAlert();
+        return;
+      }
+      timerMinutes--;timerSeconds=59;
+    } else {timerSeconds--}
+    updateTimerDisplay();
+  },1000);
+}
+
+function resetTimer(){clearInterval(timerInterval);timerRunning=false;timerMinutes=25;timerSeconds=0;updateTimerDisplay()}
+
+// Sounds using Web Audio
+let audioCtx;
+const activeSounds={};
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
+
+function createNoise(type){
+  const ctx=getAudio();
+  const bufferSize=2*ctx.sampleRate;
+  const buffer=ctx.createBuffer(1,bufferSize,ctx.sampleRate);
+  const data=buffer.getChannelData(0);
+
+  if(type==='rain'||type==='waves'){
+    for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*0.3;
+  } else if(type==='fire'){
+    for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*(Math.random()>0.98?0.4:0.1);
+  } else {
+    for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*0.15;
+  }
+
+  const source=ctx.createBufferSource();source.buffer=buffer;source.loop=true;
+  const filter=ctx.createBiquadFilter();
+  const gain=ctx.createGain();gain.gain.value=0.15;
+
+  if(type==='rain'){filter.type='bandpass';filter.frequency.value=3000;filter.Q.value=0.5}
+  else if(type==='fire'){filter.type='lowpass';filter.frequency.value=500}
+  else if(type==='birds'){filter.type='highpass';filter.frequency.value=2000;gain.gain.value=0.05}
+  else if(type==='wind'){filter.type='lowpass';filter.frequency.value=400;gain.gain.value=0.2}
+  else if(type==='cafe'){filter.type='bandpass';filter.frequency.value=1500;gain.gain.value=0.08}
+  else if(type==='waves'){filter.type='lowpass';filter.frequency.value=800;gain.gain.value=0.2}
+
+  source.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+  source.start();
+  return{source,gain};
+}
+
+function toggleSound(el){
+  const type=el.dataset.sound;
+  if(el.classList.contains('active')){
+    el.classList.remove('active');
+    if(activeSounds[type]){activeSounds[type].source.stop();delete activeSounds[type]}
+  } else {
+    el.classList.add('active');
+    activeSounds[type]=createNoise(type);
+  }
+}
+
+// Todo list
+let todos=JSON.parse(localStorage.getItem('studyTodos')||'[]');
+function renderTodos(){
+  const list=document.getElementById('todoList');
+  list.innerHTML='';
+  todos.forEach((t,i)=>{
+    const li=document.createElement('li');
+    li.className='todo-item'+(t.done?' done':'');
+    li.textContent=t.text;
+    li.onclick=()=>{todos[i].done=!todos[i].done;localStorage.setItem('studyTodos',JSON.stringify(todos));renderTodos()};
+    list.appendChild(li);
+  });
+}
+renderTodos();
+
+function addTodo(){
+  const input=document.getElementById('todoInput');
+  const text=input.value.trim();
+  if(!text)return;
+  todos.push({text,done:false});
+  localStorage.setItem('studyTodos',JSON.stringify(todos));
+  input.value='';
+  renderTodos();
+}
+document.getElementById('todoInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTodo()});
+
+function playAlert(){
+  try{
+    const ctx=getAudio();
+    [523.25,659.25,783.99].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(.1,ctx.currentTime+i*.3);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+i*.3+.5);
+      o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*.3);o.stop(ctx.currentTime+i*.3+.5);
+    });
+  }catch(e){}
+}
+
+let musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){
+    getAudio();
+    playLofi();musicOn=true;btn.textContent='🔊';
+  } else{
+    if(audioCtx){audioCtx.close();audioCtx=null;Object.keys(activeSounds).forEach(k=>{delete activeSounds[k]});document.querySelectorAll('.sound-btn').forEach(b=>b.classList.remove('active'))}
+    musicOn=false;btn.textContent='🔇';
+  }
+}
+function playLofi(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  const chords=[[261.63,329.63,392],[293.66,349.23,440],[329.63,392,494],[261.63,329.63,392]];
+  const chord=chords[Math.floor(Math.random()*chords.length)];
+  chord.forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain(),flt=audioCtx.createBiquadFilter();
+    o.type='sine';o.frequency.value=f;flt.type='lowpass';flt.frequency.value=1000;
+    g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(.03,now+.3);g.gain.linearRampToValueAtTime(0,now+3);
+    o.connect(flt);flt.connect(g);g.connect(audioCtx.destination);o.start(now);o.stop(now+3);
+  });
+  setTimeout(playLofi,3500);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

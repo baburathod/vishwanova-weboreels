@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⭐ Constellation Maker</title>
+<meta name="description" content="Draw constellations in the night sky. Click to place stars, drag to connect them.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+body{font-family:'Space Grotesk',sans-serif;background:#050510;overflow:hidden;color:#fff}
+canvas{display:block;cursor:crosshair;position:fixed;top:0;left:0}
+.ui{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.btn{padding:.6rem 1.2rem;border-radius:10px;border:1.5px solid #fbbf2433;background:rgba(0,0,0,0.5);color:#fbbf24aa;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:.85rem;transition:all .3s;backdrop-filter:blur(5px)}
+.btn:hover{border-color:#fbbf24;color:#fbbf24;transform:translateY(-2px)}
+.btn.active{background:rgba(251,191,36,0.1);border-color:#fbbf24;color:#fbbf24}
+.title{position:fixed;top:2rem;left:50%;transform:translateX(-50%);z-index:10;text-align:center}
+.title h1{font-size:1.5rem;font-weight:700;color:#fbbf24;text-shadow:0 0 20px #fbbf2444;letter-spacing:3px}
+.title p{color:#555;font-size:.8rem;margin-top:.3rem;letter-spacing:2px}
+.star-count{position:fixed;top:2rem;left:2rem;z-index:10;font-size:.85rem;color:#fbbf2488;padding:.5rem 1rem;border-radius:8px;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px)}
+.music-toggle{position:fixed;top:2rem;right:2rem;z-index:100;background:rgba(0,0,0,0.5);border:1.5px solid #fbbf2433;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;backdrop-filter:blur(5px)}
+.music-toggle:hover{border-color:#fbbf24;transform:scale(1.1)}
+.name-input{position:fixed;top:5rem;left:50%;transform:translateX(-50%);z-index:10;padding:.5rem 1rem;border-radius:10px;border:1px solid #fbbf2433;background:rgba(0,0,0,0.5);color:#fbbf24;font-family:'Space Grotesk',sans-serif;font-size:.85rem;outline:none;text-align:center;backdrop-filter:blur(5px);width:200px;display:none}
+.name-input.show{display:block}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div class="title"><h1>⭐ Constellation Maker</h1><p>Click to place stars • Drag between stars to connect</p></div>
+<div class="star-count" id="count">Stars: 0 | Lines: 0</div>
+<input class="name-input" id="nameInput" placeholder="Name your constellation...">
+<div class="ui">
+  <span class="btn active" data-mode="star" onclick="setMode(this)">⭐ Place Stars</span>
+  <span class="btn" data-mode="connect" onclick="setMode(this)">🔗 Connect</span>
+  <span class="btn" onclick="clearAll()">🗑️ Clear</span>
+  <span class="btn" onclick="toggleGrid()">📐 Grid</span>
+  <span class="btn" onclick="downloadSky()">📥 Save</span>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('sky'),ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;drawBackground()}
+resize();window.addEventListener('resize',resize);
+
+let mode='star',userStars=[],connections=[],bgStars=[],showGrid=false;
+let dragging=false,dragFrom=null;
+
+// Background stars
+for(let i=0;i<400;i++) bgStars.push({x:Math.random()*5000,y:Math.random()*5000,r:Math.random()*1.5+.3,twinkle:Math.random()*Math.PI*2,speed:Math.random()*.02+.01});
+
+function drawBackground(){
+  ctx.fillStyle='#050510';ctx.fillRect(0,0,W,H);
+  // Milky way
+  const grd=ctx.createLinearGradient(0,0,W,H);
+  grd.addColorStop(0,'transparent');grd.addColorStop(0.4,'rgba(100,80,140,0.03)');grd.addColorStop(0.6,'rgba(100,80,140,0.05)');grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+}
+
+function setMode(el){
+  document.querySelectorAll('.btn[data-mode]').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  mode=el.dataset.mode;
+  canvas.style.cursor=mode==='star'?'crosshair':'pointer';
+}
+
+function findNearestStar(x,y,maxDist=30){
+  let nearest=null,minDist=maxDist;
+  userStars.forEach(s=>{
+    const d=Math.sqrt((s.x-x)**2+(s.y-y)**2);
+    if(d<minDist){minDist=d;nearest=s}
+  });
+  return nearest;
+}
+
+canvas.addEventListener('click',e=>{
+  if(mode==='star'){
+    userStars.push({x:e.clientX,y:e.clientY,r:Math.random()*2+2,twinkle:Math.random()*Math.PI*2});
+    playStarSound();
+  }
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(mode==='connect'){
+    const star=findNearestStar(e.clientX,e.clientY);
+    if(star){dragging=true;dragFrom=star}
+  }
+});
+
+canvas.addEventListener('mouseup',e=>{
+  if(mode==='connect'&&dragging&&dragFrom){
+    const star=findNearestStar(e.clientX,e.clientY);
+    if(star&&star!==dragFrom){
+      // Check if connection already exists
+      const exists=connections.some(c=>(c.a===dragFrom&&c.b===star)||(c.a===star&&c.b===dragFrom));
+      if(!exists){connections.push({a:dragFrom,b:star});playConnectSound()}
+    }
+  }
+  dragging=false;dragFrom=null;
+});
+
+function clearAll(){userStars=[];connections=[]}
+function toggleGrid(){showGrid=!showGrid}
+
+function downloadSky(){
+  const link=document.createElement('a');link.download='constellation.png';link.href=canvas.toDataURL();link.click();
+}
+
+function animate(){
+  drawBackground();
+
+  // Background stars
+  bgStars.forEach(s=>{
+    s.twinkle+=s.speed;
+    const alpha=0.3+Math.sin(s.twinkle)*0.2;
+    const sx=s.x%W,sy=s.y%H;
+    ctx.beginPath();ctx.arc(sx,sy,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,240,${alpha})`;ctx.fill();
+  });
+
+  // Grid
+  if(showGrid){
+    ctx.strokeStyle='rgba(251,191,36,0.05)';ctx.lineWidth=1;
+    for(let x=0;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+    for(let y=0;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  }
+
+  // Connections
+  connections.forEach(c=>{
+    ctx.beginPath();ctx.moveTo(c.a.x,c.a.y);ctx.lineTo(c.b.x,c.b.y);
+    ctx.strokeStyle='rgba(251,191,36,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+  });
+
+  // Drag preview
+  if(dragging&&dragFrom){
+    ctx.beginPath();ctx.moveTo(dragFrom.x,dragFrom.y);
+    // Need mouse position - use last known
+  }
+
+  // User stars
+  userStars.forEach(s=>{
+    s.twinkle+=0.03;
+    const pulse=1+Math.sin(s.twinkle)*0.3;
+
+    // Glow
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r*6*pulse,0,Math.PI*2);
+    const glow=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*6*pulse);
+    glow.addColorStop(0,'rgba(251,191,36,0.2)');glow.addColorStop(1,'transparent');
+    ctx.fillStyle=glow;ctx.fill();
+
+    // Star
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r*pulse,0,Math.PI*2);
+    ctx.fillStyle='#fbbf24';ctx.fill();
+
+    // Cross rays
+    ctx.strokeStyle='rgba(251,191,36,0.15)';ctx.lineWidth=1;
+    const rayLen=s.r*4*pulse;
+    ctx.beginPath();ctx.moveTo(s.x-rayLen,s.y);ctx.lineTo(s.x+rayLen,s.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(s.x,s.y-rayLen);ctx.lineTo(s.x,s.y+rayLen);ctx.stroke();
+  });
+
+  document.getElementById('count').textContent=`Stars: ${userStars.length} | Lines: ${connections.length}`;
+  requestAnimationFrame(animate);
+}
+animate();
+
+let audioCtx,musicOn=false;
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
+function playStarSound(){
+  try{const c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=800+Math.random()*400;g.gain.setValueAtTime(.08,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.4);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.4)}catch(e){}
+}
+function playConnectSound(){
+  try{const c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=1200;g.gain.setValueAtTime(.06,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.3)}catch(e){}
+}
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){getCtx();playNight();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playNight(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [196,247,294,392,330,247].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*2);g.gain.linearRampToValueAtTime(.03,now+i*2+.5);g.gain.linearRampToValueAtTime(0,now+i*2+1.8);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*2);o.stop(now+i*2+2);
+  });
+  setTimeout(playNight,12000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

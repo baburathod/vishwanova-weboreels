@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 Pixel Art Studio</title>
+<meta name="description" content="Create pixel art with a beautiful neon-themed editor. Draw, fill, and export your creations.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+body{font-family:'Outfit',sans-serif;min-height:100vh;background:#0a0a1a;color:#fff;display:flex;flex-direction:column;align-items:center;padding:1.5rem;overflow-x:hidden}
+h1{font-size:clamp(1.5rem,5vw,2.5rem);font-weight:800;background:linear-gradient(135deg,#ec4899,#a78bfa,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}
+.toolbar{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;justify-content:center}
+.tool{padding:.5rem .8rem;border-radius:10px;border:2px solid #222;background:#111;cursor:pointer;font-size:.85rem;transition:all .3s;color:#aaa;font-family:'Outfit',sans-serif}
+.tool:hover{border-color:#a78bfa}
+.tool.active{border-color:#a78bfa;color:#fff;background:#a78bfa22}
+.colors{display:flex;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap;justify-content:center}
+.color-swatch{width:30px;height:30px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .3s}
+.color-swatch:hover{transform:scale(1.2)}
+.color-swatch.active{border-color:#fff;transform:scale(1.2)}
+.canvas-container{position:relative;border-radius:12px;overflow:hidden;border:2px solid #222;background:#111;touch-action:none}
+#pixelCanvas{image-rendering:pixelated;cursor:crosshair}
+.size-select{display:flex;gap:.5rem;margin-bottom:1rem}
+.size-opt{padding:.4rem .8rem;border-radius:8px;border:1.5px solid #333;background:transparent;color:#888;cursor:pointer;font-size:.8rem;transition:all .3s;font-family:'Outfit',sans-serif}
+.size-opt:hover{border-color:#a78bfa}
+.size-opt.active{border-color:#a78bfa;color:#a78bfa}
+.actions{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;justify-content:center}
+.action-btn{padding:.6rem 1.2rem;border-radius:10px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:600;transition:all .3s}
+.action-btn.primary{background:linear-gradient(135deg,#a78bfa,#ec4899);color:#fff}
+.action-btn.secondary{background:#111;color:#aaa;border:1.5px solid #333}
+.action-btn:hover{transform:translateY(-2px)}
+.music-toggle{position:fixed;top:1rem;right:1rem;z-index:100;background:#111;border:2px solid #a78bfa44;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s}
+.music-toggle:hover{border-color:#a78bfa;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<h1>🎨 Pixel Art Studio</h1>
+
+<div class="size-select">
+  <span class="size-opt active" data-s="16" onclick="setGridSize(16,this)">16×16</span>
+  <span class="size-opt" data-s="32" onclick="setGridSize(32,this)">32×32</span>
+  <span class="size-opt" data-s="8" onclick="setGridSize(8,this)">8×8</span>
+</div>
+
+<div class="toolbar">
+  <span class="tool active" data-t="draw" onclick="setTool(this)">✏️ Draw</span>
+  <span class="tool" data-t="erase" onclick="setTool(this)">🧹 Erase</span>
+  <span class="tool" data-t="fill" onclick="setTool(this)">🪣 Fill</span>
+  <span class="tool" data-t="picker" onclick="setTool(this)">🔍 Pick</span>
+</div>
+
+<div class="colors" id="palette"></div>
+
+<div class="canvas-container">
+  <canvas id="pixelCanvas"></canvas>
+</div>
+
+<div class="actions">
+  <button class="action-btn primary" onclick="downloadImg()">📥 Download PNG</button>
+  <button class="action-btn secondary" onclick="clearCanvas()">🗑️ Clear</button>
+  <button class="action-btn secondary" onclick="undo()">↩️ Undo</button>
+</div>
+
+<script>
+const canvas=document.getElementById('pixelCanvas'),ctx=canvas.getContext('2d');
+const palette=['#000000','#ffffff','#ef4444','#f97316','#fbbf24','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#a855f7','#f43f5e','#84cc16','#0ea5e9','#d946ef','#64748b','#78716c','#fcd34d','#34d399','#818cf8','#fb7185','#2dd4bf','#c084fc'];
+
+let gridSize=16,pixelSize,grid=[],tool='draw',currentColor='#ef4444',isDrawing=false,history=[];
+
+function initPalette(){
+  const el=document.getElementById('palette');
+  el.innerHTML='';
+  palette.forEach((c,i)=>{
+    const swatch=document.createElement('div');
+    swatch.className='color-swatch'+(i===2?' active':'');
+    swatch.style.background=c;
+    swatch.onclick=()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));swatch.classList.add('active');currentColor=c};
+    el.appendChild(swatch);
+  });
+}
+initPalette();
+
+function setGridSize(s,el){
+  document.querySelectorAll('.size-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  gridSize=s;initCanvas();
+}
+
+function setTool(el){
+  document.querySelectorAll('.tool').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  tool=el.dataset.t;
+}
+
+function initCanvas(){
+  const maxW=Math.min(innerWidth-60,500);
+  pixelSize=Math.floor(maxW/gridSize);
+  canvas.width=gridSize*pixelSize;
+  canvas.height=gridSize*pixelSize;
+  grid=Array.from({length:gridSize},()=>Array(gridSize).fill(null));
+  history=[];
+  drawGrid();
+}
+
+function drawGrid(){
+  ctx.fillStyle='#111827';ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Grid lines
+  ctx.strokeStyle='#1e293b';ctx.lineWidth=1;
+  for(let i=0;i<=gridSize;i++){
+    ctx.beginPath();ctx.moveTo(i*pixelSize,0);ctx.lineTo(i*pixelSize,canvas.height);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i*pixelSize);ctx.lineTo(canvas.width,i*pixelSize);ctx.stroke();
+  }
+  // Pixels
+  for(let y=0;y<gridSize;y++){
+    for(let x=0;x<gridSize;x++){
+      if(grid[y][x]){
+        ctx.fillStyle=grid[y][x];
+        ctx.fillRect(x*pixelSize+1,y*pixelSize+1,pixelSize-2,pixelSize-2);
+      }
+    }
+  }
+}
+
+function getGridPos(e){
+  const rect=canvas.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const clientY=e.touches?e.touches[0].clientY:e.clientY;
+  const x=Math.floor((clientX-rect.left)/pixelSize);
+  const y=Math.floor((clientY-rect.top)/pixelSize);
+  return {x:Math.max(0,Math.min(gridSize-1,x)),y:Math.max(0,Math.min(gridSize-1,y))};
+}
+
+function saveHistory(){
+  history.push(grid.map(r=>[...r]));
+  if(history.length>50)history.shift();
+}
+
+function paint(e){
+  const{x,y}=getGridPos(e);
+  if(tool==='draw'){grid[y][x]=currentColor}
+  else if(tool==='erase'){grid[y][x]=null}
+  else if(tool==='picker'){if(grid[y][x])currentColor=grid[y][x]}
+  else if(tool==='fill'){floodFill(x,y,grid[y][x],currentColor)}
+  drawGrid();
+}
+
+function floodFill(x,y,target,replacement){
+  if(target===replacement)return;
+  if(x<0||x>=gridSize||y<0||y>=gridSize)return;
+  if(grid[y][x]!==target)return;
+  grid[y][x]=replacement;
+  floodFill(x+1,y,target,replacement);
+  floodFill(x-1,y,target,replacement);
+  floodFill(x,y+1,target,replacement);
+  floodFill(x,y-1,target,replacement);
+}
+
+canvas.addEventListener('mousedown',e=>{isDrawing=true;saveHistory();paint(e)});
+canvas.addEventListener('mousemove',e=>{if(isDrawing)paint(e)});
+canvas.addEventListener('mouseup',()=>isDrawing=false);
+canvas.addEventListener('mouseleave',()=>isDrawing=false);
+canvas.addEventListener('touchstart',e=>{isDrawing=true;saveHistory();paint(e);e.preventDefault()});
+canvas.addEventListener('touchmove',e=>{if(isDrawing)paint(e);e.preventDefault()});
+canvas.addEventListener('touchend',()=>isDrawing=false);
+
+function clearCanvas(){saveHistory();grid=Array.from({length:gridSize},()=>Array(gridSize).fill(null));drawGrid()}
+function undo(){if(history.length){grid=history.pop();drawGrid()}}
+
+function downloadImg(){
+  const exp=document.createElement('canvas');exp.width=gridSize;exp.height=gridSize;
+  const ectx=exp.getContext('2d');
+  for(let y=0;y<gridSize;y++)for(let x=0;x<gridSize;x++){if(grid[y][x]){ectx.fillStyle=grid[y][x];ectx.fillRect(x,y,1,1)}}
+  const link=document.createElement('a');link.download='pixel-art.png';link.href=exp.toDataURL();link.click();
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playLoop();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playLoop(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [261.63,329.63,392,329.63,261.63,349.23,392,440].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.4);g.gain.linearRampToValueAtTime(.02,now+i*.4+.05);g.gain.linearRampToValueAtTime(0,now+i*.4+.35);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.4);o.stop(now+i*.4+.4);
+  });
+  setTimeout(playLoop,3200);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+initCanvas();
+</script>
+</body>
+</html>

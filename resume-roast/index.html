@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>😤 Resume Roast Machine</title>
+<meta name="description" content="Paste your resume bullet points and get brutally honest feedback.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
+body{font-family:'Outfit',sans-serif;min-height:100vh;background:#080810;color:#fff;overflow-x:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.container{position:relative;z-index:1;max-width:650px;width:90%;text-align:center;padding:2rem}
+h1{font-size:clamp(2rem,7vw,4rem);font-weight:900;background:linear-gradient(135deg,#f97316,#ef4444,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+.sub{color:#f9731666;letter-spacing:3px;text-transform:uppercase;font-size:.9rem;margin-bottom:2rem}
+textarea{width:100%;height:120px;padding:1.2rem;border-radius:16px;border:2px solid #f9731633;background:#12121e;color:#fff;font-family:'Outfit',sans-serif;font-size:1rem;resize:none;outline:none;transition:all .3s;margin-bottom:1.5rem}
+textarea:focus{border-color:#f97316;box-shadow:0 0 30px #f9731633}
+textarea::placeholder{color:#555}
+.btn{width:100%;padding:1.1rem;border:none;border-radius:16px;background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;font-size:1.15rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .3s;text-transform:uppercase;letter-spacing:2px}
+.btn:hover{transform:translateY(-3px);box-shadow:0 8px 30px #ef444455}
+.result{margin-top:2rem;padding:2rem;border-radius:20px;background:#12121e;border:1px solid #f9731622;display:none;text-align:left}
+.result.visible{display:block;animation:fadeIn .5s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+.score-bar{height:8px;border-radius:99px;background:#222;margin:1rem 0;overflow:hidden}
+.score-fill{height:100%;border-radius:99px;transition:width 1s ease;background:linear-gradient(90deg,#ef4444,#f97316,#22c55e)}
+.roast-text{font-size:1.05rem;line-height:1.8;color:#ccc;margin-bottom:1rem}
+.tip{padding:.8rem 1rem;border-radius:12px;background:#f9731611;border-left:3px solid #f97316;margin-top:.8rem;font-size:.95rem;color:#f9a864}
+.score-label{font-size:2rem;font-weight:900;color:#f97316;text-align:center}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:#12121e;border:2px solid #f9731644;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s}
+.music-toggle:hover{border-color:#f97316;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>Resume Roast</h1>
+  <p class="sub">Paste your resume. Get destroyed.</p>
+  <textarea id="resumeInput" placeholder="Paste resume bullet points here...&#10;e.g. 'Synergized cross-functional deliverables to optimize stakeholder engagement'"></textarea>
+  <button class="btn" onclick="roastResume()">🔥 Roast My Resume</button>
+  <div class="result" id="result">
+    <div class="score-label" id="scoreLabel"></div>
+    <div class="score-bar"><div class="score-fill" id="scoreFill" style="width:0"></div></div>
+    <div class="roast-text" id="roastText"></div>
+    <div class="tip" id="tip"></div>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+let embers=[];
+for(let i=0;i<50;i++) embers.push({x:Math.random()*innerWidth,y:innerHeight+Math.random()*100,r:Math.random()*3+1,speed:Math.random()*2+.5,wobble:Math.random()*Math.PI*2,hue:Math.random()*30+10});
+function draw(){
+  ctx.fillStyle='rgba(8,8,16,0.08)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  embers.forEach(e=>{
+    e.y-=e.speed;e.wobble+=.03;e.x+=Math.sin(e.wobble)*.5;
+    if(e.y<-10){e.y=canvas.height+10;e.x=Math.random()*canvas.width}
+    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${e.hue},100%,60%,${.3+Math.sin(e.wobble)*.2})`;ctx.fill();
+  });
+  requestAnimationFrame(draw);
+}
+draw();
+
+const buzzwords=['synergy','leverage','disrupt','paradigm','ecosystem','scalable','innovative','cutting-edge','world-class','best-in-class','thought leader','circle back','deep dive','move the needle','low-hanging fruit','bandwidth','stakeholder','deliverables','actionable','streamline','optimize','holistic','robust','proactive','empower','democratize'];
+
+const roasts=[
+  {text:"This resume reads like a corporate buzzword bingo card that scored a blackout. HR loved it. Humans didn't.",score:25},
+  {text:"I've read fortune cookies with more substance. At least those come with a snack.",score:30},
+  {text:"Every bullet point says 'I did things' without ever saying WHAT things. It's like a mystery novel where even the detective gives up.",score:20},
+  {text:"'Optimized synergistic deliverables'? That's not a skill, that's a sentence generated by shaking a bag of LinkedIn posts.",score:15},
+  {text:"This looks like you asked ChatGPT to write a resume but forgot to give it any real information about you. Bold strategy.",score:35},
+  {text:"Not gonna lie, this resume has a strong 'I used a template and changed nothing but the name' energy. Which is fine. If your name is John Template.",score:40},
+  {text:"The good news: you clearly know big words. The bad news: knowing big words and using them correctly are two very different skills.",score:30},
+  {text:"I've seen more personality in a terms and conditions page. At least those have consequences.",score:22},
+];
+
+const tips=[
+  "💡 Replace vague buzzwords with specific metrics. 'Increased sales by 47%' beats 'optimized revenue streams' every time.",
+  "💡 Start each bullet with a strong action verb: Led, Built, Shipped, Reduced — not 'Was responsible for'.",
+  "💡 Ask yourself: could literally anyone paste this same bullet on their resume? If yes, it means nothing.",
+  "💡 Quantify EVERYTHING. How many users? What percentage improvement? How much money saved?",
+  "💡 If you can't explain what you did to a 10-year-old, your resume bullet is too vague.",
+  "💡 Remove the 'References available upon request' line. It's 2026, not 1998.",
+];
+
+function roastResume(){
+  const input=document.getElementById('resumeInput').value.trim();
+  if(!input){document.getElementById('resumeInput').style.borderColor='#ef4444';return}
+
+  const foundBuzz=buzzwords.filter(b=>input.toLowerCase().includes(b));
+  const roast=roasts[Math.floor(Math.random()*roasts.length)];
+  let score=roast.score;
+  if(foundBuzz.length>3)score=Math.max(score-10,5);
+  if(input.length>500)score=Math.min(score+10,50);
+
+  const result=document.getElementById('result');
+  result.classList.add('visible');
+  document.getElementById('scoreLabel').textContent=`${score}/100`;
+  setTimeout(()=>document.getElementById('scoreFill').style.width=score+'%',100);
+
+  let roastMsg=roast.text;
+  if(foundBuzz.length>0){
+    roastMsg+=`\n\n🚨 Buzzword Alert: Found ${foundBuzz.length} corporate buzzwords: "${foundBuzz.slice(0,5).join('", "')}"${foundBuzz.length>5?'... and more':''}. Each one makes a recruiter's soul leave their body.`;
+  }
+  document.getElementById('roastText').textContent=roastMsg;
+  document.getElementById('tip').textContent=tips[Math.floor(Math.random()*tips.length)];
+}
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playBeat();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playBeat(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  [82.41,110,146.83,110].forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sawtooth';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*.5);g.gain.linearRampToValueAtTime(.05,now+i*.5+.05);g.gain.linearRampToValueAtTime(0,now+i*.5+.45);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*.5);o.stop(now+i*.5+.5);
+  });
+  setTimeout(playBeat,2000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

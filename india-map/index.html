@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇮🇳 Incredible India Map</title>
+<meta name="description" content="Interactive India map with fun facts about every state. Explore the incredible diversity!">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
+body{font-family:'Outfit',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0a0a1a,#0d1117);color:#fff;overflow-x:hidden;padding:1.5rem}
+.container{max-width:800px;margin:0 auto}
+h1{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;text-align:center;background:linear-gradient(135deg,#f97316,#fff,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+.sub{text-align:center;color:#f9731644;letter-spacing:3px;text-transform:uppercase;font-size:.8rem;margin-bottom:2rem}
+.map-area{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem}
+@media(max-width:600px){.map-area{grid-template-columns:1fr}}
+.states-grid{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;align-content:start}
+.state-btn{padding:.4rem .8rem;border-radius:8px;border:1.5px solid #1e293b;background:#111827;color:#aaa;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.75rem;transition:all .3s}
+.state-btn:hover{border-color:#f97316;color:#f97316;transform:translateY(-1px)}
+.state-btn.active{background:#f9731622;border-color:#f97316;color:#f97316}
+.info-panel{padding:1.5rem;border-radius:16px;background:#111827;border:1px solid #1e293b;position:sticky;top:1.5rem}
+.info-flag{font-size:3rem;margin-bottom:.5rem}
+.info-name{font-size:1.8rem;font-weight:900;color:#f97316;margin-bottom:.3rem}
+.info-capital{font-size:.9rem;color:#666;margin-bottom:1rem}
+.info-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
+.stat-card{padding:.8rem;border-radius:10px;background:#0a0a14;border:1px solid #1e293b;text-align:center}
+.stat-val{font-size:1.1rem;font-weight:700;color:#06b6d4}
+.stat-label{font-size:.65rem;color:#555;text-transform:uppercase;letter-spacing:1px;margin-top:.2rem}
+.info-fun{padding:1rem;border-radius:12px;background:#f9731611;border:1px solid #f9731622;font-size:.9rem;line-height:1.8;color:#ccc}
+.info-fun strong{color:#f97316}
+.quiz-area{padding:1.5rem;border-radius:16px;background:#111827;border:1px solid #1e293b;text-align:center}
+.quiz-title{font-size:.8rem;color:#666;letter-spacing:2px;margin-bottom:1rem;text-transform:uppercase}
+.quiz-q{font-size:1.1rem;margin-bottom:1rem;color:#e2e8f0}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.quiz-opt{padding:.7rem;border-radius:10px;border:2px solid #1e293b;background:#0a0a14;color:#aaa;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .3s}
+.quiz-opt:hover{border-color:#f97316}
+.quiz-opt.correct{border-color:#22c55e;background:#22c55e11;color:#22c55e}
+.quiz-opt.wrong{border-color:#ef4444;background:#ef444411;color:#ef4444}
+.score{margin-top:1rem;font-size:.9rem;color:#f97316}
+.music-toggle{position:fixed;top:1rem;right:1rem;z-index:100;background:#111827;border:2px solid #f9731644;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s}
+.music-toggle:hover{border-color:#f97316;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+<div class="container">
+  <h1>🇮🇳 Incredible India</h1>
+  <p class="sub">Tap a state to explore</p>
+  <div class="map-area">
+    <div class="states-grid" id="statesGrid"></div>
+    <div class="info-panel" id="infoPanel">
+      <div class="info-flag" id="infoEmoji">🇮🇳</div>
+      <div class="info-name" id="infoName">India</div>
+      <div class="info-capital" id="infoCapital">Capital: New Delhi</div>
+      <div class="info-stats" id="infoStats">
+        <div class="stat-card"><div class="stat-val">28</div><div class="stat-label">States</div></div>
+        <div class="stat-card"><div class="stat-val">1.4B</div><div class="stat-label">Population</div></div>
+        <div class="stat-card"><div class="stat-val">22</div><div class="stat-label">Languages</div></div>
+        <div class="stat-card"><div class="stat-val">3.3M km²</div><div class="stat-label">Area</div></div>
+      </div>
+      <div class="info-fun" id="infoFun"><strong>Fun Fact:</strong> India is the largest democracy in the world and has the world's largest postal network with over 155,000 post offices!</div>
+    </div>
+  </div>
+  <div class="quiz-area">
+    <div class="quiz-title">🧠 Quick India Quiz</div>
+    <div class="quiz-q" id="quizQ"></div>
+    <div class="quiz-opts" id="quizOpts"></div>
+    <div class="score" id="quizScore">Score: 0 / 0</div>
+  </div>
+</div>
+
+<script>
+const states=[
+  {name:"Maharashtra",emoji:"🏙️",capital:"Mumbai",pop:"126M",area:"308K km²",famous:"Bollywood",fun:"Home to Bollywood, Mumbai produces more films than Hollywood! The city's local trains carry 7.5 million commuters daily."},
+  {name:"Karnataka",emoji:"💻",capital:"Bengaluru",pop:"67M",area:"192K km²",famous:"IT Hub",fun:"Bengaluru is called the 'Silicon Valley of India' and has more than 67% of India's IT industry!"},
+  {name:"Tamil Nadu",emoji:"🛕",capital:"Chennai",pop:"77M",area:"130K km²",famous:"Temples",fun:"Tamil is one of the oldest living languages, dating back over 5,000 years. The state has over 33,000 ancient temples."},
+  {name:"Rajasthan",emoji:"🏰",capital:"Jaipur",pop:"79M",area:"342K km²",famous:"Forts",fun:"Rajasthan is the largest state by area and has 6 magnificent hill forts that are UNESCO World Heritage Sites."},
+  {name:"Kerala",emoji:"🌴",capital:"Thiruvananthapuram",pop:"35M",area:"39K km²",famous:"Backwaters",fun:"Kerala has the highest literacy rate in India (96.2%) and is known as 'God's Own Country'."},
+  {name:"Gujarat",emoji:"🦁",capital:"Gandhinagar",pop:"64M",area:"196K km²",famous:"Gir Lions",fun:"Home to the ONLY wild population of Asiatic lions on Earth! Also the birthplace of Mahatma Gandhi."},
+  {name:"West Bengal",emoji:"🐅",capital:"Kolkata",pop:"99M",area:"89K km²",famous:"Culture",fun:"Kolkata's Durga Puja is the largest open-air art festival in the world, attracting over 20 million visitors!"},
+  {name:"Uttar Pradesh",emoji:"🕌",capital:"Lucknow",pop:"231M",area:"241K km²",famous:"Taj Mahal",fun:"UP is the most populous state — if it were a country, it'd be the 5th most populous nation on Earth!"},
+  {name:"Punjab",emoji:"🌾",capital:"Chandigarh",pop:"28M",area:"50K km²",famous:"Golden Temple",fun:"Punjab is India's breadbasket, producing 84% of the country's wheat. The Golden Temple serves 100,000 free meals daily!"},
+  {name:"Goa",emoji:"🏖️",capital:"Panaji",pop:"1.5M",area:"4K km²",famous:"Beaches",fun:"India's smallest state by area! Goa has 90+ km of pristine coastline and was a Portuguese colony for 451 years."},
+  {name:"Himachal Pradesh",emoji:"🏔️",capital:"Shimla",pop:"7M",area:"56K km²",famous:"Mountains",fun:"Called the 'Land of Gods' — has more than 2,000 temples! Home to the world's highest cricket ground at Chail."},
+  {name:"Assam",emoji:"🍵",capital:"Dispur",pop:"35M",area:"79K km²",famous:"Tea",fun:"Produces more than 50% of India's total tea! Assam is also home to the one-horned Indian rhinoceros."},
+  {name:"Odisha",emoji:"🛕",capital:"Bhubaneswar",pop:"46M",area:"156K km²",famous:"Temples",fun:"Home to the Konark Sun Temple, one of India's most iconic monuments. Odisha has Asia's largest brackish water lagoon—Chilika Lake."},
+  {name:"Madhya Pradesh",emoji:"🐯",capital:"Bhopal",pop:"85M",area:"308K km²",famous:"Tigers",fun:"Called the 'Tiger State of India' — has the highest number of tigers in the country! Also the largest state by area in Central India."},
+  {name:"Telangana",emoji:"🏰",capital:"Hyderabad",pop:"40M",area:"112K km²",famous:"Biryani",fun:"Hyderabad is the pharma capital and IT hub of India. The iconic Charminar was built in 1591 to ward off a deadly plague!"},
+  {name:"Bihar",emoji:"📚",capital:"Patna",pop:"124M",area:"94K km²",famous:"Nalanda",fun:"Home to the world's oldest university—Nalanda (5th century AD)! Bihar literally means 'monastery' (Vihara)."},
+];
+
+const grid=document.getElementById('statesGrid');
+states.forEach((s,i)=>{
+  const btn=document.createElement('span');
+  btn.className='state-btn';
+  btn.textContent=s.emoji+' '+s.name;
+  btn.onclick=()=>showState(s,btn);
+  grid.appendChild(btn);
+});
+
+function showState(s,btn){
+  document.querySelectorAll('.state-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('infoEmoji').textContent=s.emoji;
+  document.getElementById('infoName').textContent=s.name;
+  document.getElementById('infoCapital').textContent='Capital: '+s.capital;
+  document.getElementById('infoStats').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${s.pop}</div><div class="stat-label">Population</div></div>
+    <div class="stat-card"><div class="stat-val">${s.area}</div><div class="stat-label">Area</div></div>
+    <div class="stat-card"><div class="stat-val">${s.famous}</div><div class="stat-label">Famous For</div></div>
+    <div class="stat-card"><div class="stat-val">${s.capital}</div><div class="stat-label">Capital</div></div>`;
+  document.getElementById('infoFun').innerHTML=`<strong>Fun Fact:</strong> ${s.fun}`;
+}
+
+// Quiz
+const quizzes=[
+  {q:"Which state is known as 'God's Own Country'?",opts:["Kerala","Goa","Tamil Nadu","Karnataka"],answer:0},
+  {q:"Which city is the 'Silicon Valley of India'?",opts:["Hyderabad","Chennai","Bengaluru","Pune"],answer:2},
+  {q:"The Taj Mahal is in which state?",opts:["Rajasthan","Madhya Pradesh","Uttar Pradesh","Delhi"],answer:2},
+  {q:"Which is India's smallest state by area?",opts:["Sikkim","Goa","Tripura","Mizoram"],answer:1},
+  {q:"The Golden Temple is in which state?",opts:["Rajasthan","Punjab","Haryana","Gujarat"],answer:1},
+  {q:"Which state produces the most tea in India?",opts:["Kerala","West Bengal","Assam","Tamil Nadu"],answer:2},
+  {q:"Nalanda University is in which state?",opts:["Uttar Pradesh","Bihar","Jharkhand","Odisha"],answer:1},
+  {q:"How many official languages does India have?",opts:["14","18","22","26"],answer:2},
+];
+let quizIdx=0,quizRight=0,quizTotal=0;
+
+function loadQuiz(){
+  const q=quizzes[quizIdx%quizzes.length];
+  document.getElementById('quizQ').textContent=q.q;
+  const opts=document.getElementById('quizOpts');
+  opts.innerHTML='';
+  q.opts.forEach((o,i)=>{
+    const btn=document.createElement('div');
+    btn.className='quiz-opt';
+    btn.textContent=o;
+    btn.onclick=()=>answerQuiz(i,q.answer);
+    opts.appendChild(btn);
+  });
+}
+
+function answerQuiz(selected,correct){
+  const opts=document.querySelectorAll('.quiz-opt');
+  opts.forEach((o,i)=>{o.style.pointerEvents='none';if(i===correct)o.classList.add('correct');if(i===selected&&i!==correct)o.classList.add('wrong')});
+  quizTotal++;
+  if(selected===correct)quizRight++;
+  document.getElementById('quizScore').textContent=`Score: ${quizRight} / ${quizTotal}`;
+  setTimeout(()=>{quizIdx++;loadQuiz()},1500);
+}
+loadQuiz();
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playIndian();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playIndian(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // Raga-inspired pentatonic
+  const notes=[261.63,293.66,329.63,349.23,392,440,494,523.25];
+  for(let i=0;i<5;i++){
+    const f=notes[Math.floor(Math.random()*notes.length)];
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*1.2);g.gain.linearRampToValueAtTime(.04,now+i*1.2+.2);g.gain.linearRampToValueAtTime(0,now+i*1.2+1.1);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*1.2);o.stop(now+i*1.2+1.2);
+  }
+  // Tabla-like rhythm
+  const tabla=audioCtx.createOscillator(),tg=audioCtx.createGain();
+  tabla.frequency.setValueAtTime(200,now);tabla.frequency.exponentialRampToValueAtTime(80,now+.1);
+  tg.gain.setValueAtTime(.15,now);tg.gain.exponentialRampToValueAtTime(.001,now+.15);
+  tabla.connect(tg);tg.connect(audioCtx.destination);tabla.start(now);tabla.stop(now+.15);
+  setTimeout(playIndian,6000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

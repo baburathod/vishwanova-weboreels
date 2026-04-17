@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌊 Emotional Landscape</title>
+<meta name="description" content="An interactive generative art experience that transforms your emotions into living landscapes.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap');
+body{font-family:'Outfit',sans-serif;margin:0;background:#000;overflow:hidden;color:#fff}
+canvas{display:block;position:fixed;top:0;left:0}
+.ui{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:10;text-align:center}
+h1{font-size:1.5rem;font-weight:300;color:#fff;margin-bottom:1rem;text-shadow:0 0 20px rgba(255,255,255,0.3);letter-spacing:3px}
+.emotions{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap}
+.emotion{padding:.7rem 1.5rem;border-radius:99px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.4);backdrop-filter:blur(10px);cursor:pointer;font-family:'Outfit',sans-serif;font-size:.9rem;color:#ccc;transition:all .5s}
+.emotion:hover{border-color:rgba(255,255,255,0.4);transform:translateY(-3px)}
+.emotion.active{border-color:currentColor;background:rgba(255,255,255,0.08);transform:translateY(-3px)}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;backdrop-filter:blur(5px)}
+.music-toggle:hover{border-color:rgba(255,255,255,0.4);transform:scale(1.1)}
+.mood-text{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(2rem,8vw,5rem);font-weight:700;pointer-events:none;opacity:.08;z-index:1;letter-spacing:10px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div class="mood-text" id="moodText">SERENE</div>
+<div class="ui">
+  <h1>How do you feel?</h1>
+  <div class="emotions">
+    <span class="emotion active" style="color:#06b6d4" data-mood="serene" onclick="setMood(this)">🌊 Serene</span>
+    <span class="emotion" style="color:#fbbf24" data-mood="joyful" onclick="setMood(this)">☀️ Joyful</span>
+    <span class="emotion" style="color:#a78bfa" data-mood="dreamy" onclick="setMood(this)">🌙 Dreamy</span>
+    <span class="emotion" style="color:#ef4444" data-mood="passionate" onclick="setMood(this)">🔥 Passionate</span>
+    <span class="emotion" style="color:#22c55e" data-mood="peaceful" onclick="setMood(this)">🌿 Peaceful</span>
+    <span class="emotion" style="color:#64748b" data-mood="melancholy" onclick="setMood(this)">🌧️ Melancholy</span>
+  </div>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+const moods={
+  serene:{colors:['#0e7490','#06b6d4','#22d3ee','#0c4a6e'],speed:.3,wave:40,particles:60},
+  joyful:{colors:['#f59e0b','#fbbf24','#fcd34d','#d97706'],speed:.8,wave:30,particles:80},
+  dreamy:{colors:['#7c3aed','#a78bfa','#c4b5fd','#5b21b6'],speed:.2,wave:50,particles:50},
+  passionate:{colors:['#dc2626','#ef4444','#f87171','#991b1b'],speed:1,wave:20,particles:100},
+  peaceful:{colors:['#059669','#22c55e','#4ade80','#064e3b'],speed:.15,wave:60,particles:40},
+  melancholy:{colors:['#374151','#6b7280','#9ca3af','#1f2937'],speed:.1,wave:70,particles:30}
+};
+
+let currentMood='serene',targetMood='serene',transition=1;
+let particles=[];
+let time=0;
+
+function setMood(el){
+  document.querySelectorAll('.emotion').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  targetMood=el.dataset.mood;
+  document.getElementById('moodText').textContent=targetMood.toUpperCase();
+  // Reset particles
+  initParticles();
+}
+
+function initParticles(){
+  const m=moods[targetMood];
+  particles=[];
+  for(let i=0;i<m.particles;i++){
+    particles.push({
+      x:Math.random()*W,
+      y:Math.random()*H,
+      r:Math.random()*4+1,
+      speed:Math.random()*m.speed+.1,
+      angle:Math.random()*Math.PI*2,
+      color:m.colors[Math.floor(Math.random()*m.colors.length)]
+    });
+  }
+}
+initParticles();
+
+function lerp(a,b,t){return a+(b-a)*t}
+
+function drawLandscape(){
+  const m=moods[targetMood];
+  time+=m.speed*0.01;
+
+  // Background gradient
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,m.colors[3]+'88');
+  grad.addColorStop(1,'#000');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
+
+  // Multiple wave layers
+  for(let layer=0;layer<4;layer++){
+    ctx.beginPath();
+    const baseY=H*0.4+layer*H*0.12;
+    ctx.moveTo(0,H);
+    for(let x=0;x<=W;x+=3){
+      const y=baseY+
+        Math.sin(x*0.005+time*2+layer)*m.wave+
+        Math.sin(x*0.01+time*3+layer*2)*m.wave*0.5+
+        Math.cos(x*0.003+time+layer)*m.wave*0.3;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W,H);
+    ctx.closePath();
+    ctx.fillStyle=m.colors[layer]+(layer===0?'33':layer===1?'44':layer===2?'55':'66');
+    ctx.fill();
+  }
+
+  // Particles
+  particles.forEach(p=>{
+    p.x+=Math.cos(p.angle)*p.speed;
+    p.y+=Math.sin(p.angle)*p.speed;
+    p.angle+=0.01;
+    if(p.x<-10)p.x=W+10;if(p.x>W+10)p.x=-10;
+    if(p.y<-10)p.y=H+10;if(p.y>H+10)p.y=-10;
+
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=p.color+'88';ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*3,0,Math.PI*2);
+    const glow=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*3);
+    glow.addColorStop(0,p.color+'22');glow.addColorStop(1,'transparent');
+    ctx.fillStyle=glow;ctx.fill();
+  });
+}
+
+function animate(){
+  drawLandscape();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// Mouse interaction - push particles
+document.addEventListener('mousemove',e=>{
+  particles.forEach(p=>{
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<150){
+      p.x-=dx/d*2;
+      p.y-=dy/d*2;
+    }
+  });
+});
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playAmbient();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playAmbient(){
+  if(!audioCtx)return;
+  const m=moods[targetMood];
+  const scales={serene:[261.63,329.63,392,523.25],joyful:[329.63,392,440,523.25],dreamy:[220,261.63,329.63,440],passionate:[196,261.63,329.63,392],peaceful:[261.63,293.66,392,440],melancholy:[220,261.63,293.66,349.23]};
+  const notes=scales[targetMood]||scales.serene;
+  const now=audioCtx.currentTime;
+  notes.forEach((f,i)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,now+i*2);g.gain.linearRampToValueAtTime(.035,now+i*2+.5);g.gain.linearRampToValueAtTime(0,now+i*2+1.8);
+    o.connect(g);g.connect(audioCtx.destination);o.start(now+i*2);o.stop(now+i*2+2);
+  });
+  setTimeout(playAmbient,8000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

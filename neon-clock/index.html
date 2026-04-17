@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕐 Neon Clock</title>
+<meta name="description" content="A stunning neon analog + digital clock with multiple themes.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+body{font-family:'Orbitron',sans-serif;min-height:100vh;background:#0a0a14;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+canvas{display:block}
+.digital{font-size:clamp(2rem,6vw,4rem);font-weight:900;margin-top:1.5rem;letter-spacing:5px;text-shadow:0 0 20px var(--glow)}
+.date-display{font-size:clamp(.8rem,2vw,1.1rem);font-weight:400;color:#666;margin-top:.5rem;letter-spacing:3px}
+.themes{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:10}
+.theme-btn{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .3s}
+.theme-btn:hover{transform:scale(1.2)}
+.theme-btn.active{border-color:#fff}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(10,10,20,0.8);border:2px solid var(--glow,#06b6d4);border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;opacity:.5}
+.music-toggle:hover{opacity:1;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="clock"></canvas>
+<div class="digital" id="digital" style="--glow:#06b6d4">00:00:00</div>
+<div class="date-display" id="dateDisplay"></div>
+<div class="themes" id="themes"></div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('clock'),ctx=canvas.getContext('2d');
+const size=Math.min(innerWidth,innerHeight)*0.6;
+canvas.width=size;canvas.height=size;
+const cx=size/2,cy=size/2,radius=size/2-20;
+
+const themes=[
+  {name:'Cyan',primary:'#06b6d4',secondary:'#0891b2',glow:'#06b6d4'},
+  {name:'Purple',primary:'#a78bfa',secondary:'#7c3aed',glow:'#a78bfa'},
+  {name:'Rose',primary:'#ec4899',secondary:'#db2777',glow:'#ec4899'},
+  {name:'Green',primary:'#22c55e',secondary:'#16a34a',glow:'#22c55e'},
+  {name:'Gold',primary:'#fbbf24',secondary:'#d97706',glow:'#fbbf24'},
+  {name:'Red',primary:'#ef4444',secondary:'#dc2626',glow:'#ef4444'},
+];
+let currentTheme=0;
+
+const themesDiv=document.getElementById('themes');
+themes.forEach((t,i)=>{
+  const btn=document.createElement('div');
+  btn.className='theme-btn'+(i===0?' active':'');
+  btn.style.background=t.primary;
+  btn.onclick=()=>{currentTheme=i;document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('digital').style.setProperty('--glow',t.glow);document.querySelector('.music-toggle').style.borderColor=t.glow};
+  themesDiv.appendChild(btn);
+});
+
+function drawClock(){
+  const now=new Date();
+  const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds(),ms=now.getMilliseconds();
+  const t=themes[currentTheme];
+
+  ctx.clearRect(0,0,size,size);
+
+  // Outer ring glow
+  ctx.beginPath();ctx.arc(cx,cy,radius+5,0,Math.PI*2);
+  ctx.strokeStyle=t.primary+'22';ctx.lineWidth=10;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);
+  ctx.strokeStyle=t.primary+'44';ctx.lineWidth=2;ctx.stroke();
+
+  // Hour markers
+  for(let i=0;i<12;i++){
+    const angle=(i*30-90)*Math.PI/180;
+    const inner=radius-20;const outer=radius-5;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(angle)*inner,cy+Math.sin(angle)*inner);
+    ctx.lineTo(cx+Math.cos(angle)*outer,cy+Math.sin(angle)*outer);
+    ctx.strokeStyle=t.primary;ctx.lineWidth=3;ctx.stroke();
+    // Numbers
+    const numR=radius-35;
+    ctx.font='bold 14px Orbitron';ctx.fillStyle=t.primary+'aa';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(i===0?'12':i.toString(),cx+Math.cos(angle)*numR,cy+Math.sin(angle)*numR);
+  }
+
+  // Minute markers
+  for(let i=0;i<60;i++){
+    if(i%5===0)continue;
+    const angle=(i*6-90)*Math.PI/180;
+    const inner=radius-10;const outer=radius-5;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(angle)*inner,cy+Math.sin(angle)*inner);
+    ctx.lineTo(cx+Math.cos(angle)*outer,cy+Math.sin(angle)*outer);
+    ctx.strokeStyle=t.primary+'33';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // Second arc
+  const secAngle=((s+ms/1000)*6-90)*Math.PI/180;
+  ctx.beginPath();ctx.arc(cx,cy,radius-2,-Math.PI/2,secAngle);
+  ctx.strokeStyle=t.primary+'55';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+
+  // Hour hand
+  const hAngle=((h%12+m/60)*30-90)*Math.PI/180;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(hAngle)*(radius*0.5),cy+Math.sin(hAngle)*(radius*0.5));
+  ctx.strokeStyle=t.primary;ctx.lineWidth=4;ctx.lineCap='round';ctx.stroke();
+  // Hour hand glow
+  ctx.shadowColor=t.glow;ctx.shadowBlur=15;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(hAngle)*(radius*0.5),cy+Math.sin(hAngle)*(radius*0.5));
+  ctx.strokeStyle=t.primary;ctx.lineWidth=2;ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Minute hand
+  const mAngle=((m+s/60)*6-90)*Math.PI/180;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(mAngle)*(radius*0.7),cy+Math.sin(mAngle)*(radius*0.7));
+  ctx.strokeStyle=t.primary;ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+
+  // Second hand
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(secAngle)*(radius*0.8),cy+Math.sin(secAngle)*(radius*0.8));
+  ctx.strokeStyle=t.secondary;ctx.lineWidth=1.5;ctx.lineCap='round';ctx.stroke();
+
+  // Center dot
+  ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fillStyle=t.primary;ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+
+  // Digital display
+  const timeStr=[h.toString().padStart(2,'0'),m.toString().padStart(2,'0'),s.toString().padStart(2,'0')].join(':');
+  document.getElementById('digital').textContent=timeStr;
+  document.getElementById('digital').style.color=t.primary;
+  document.getElementById('digital').style.textShadow=`0 0 20px ${t.glow}66`;
+
+  // Date
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dateDisplay').textContent=`${days[now.getDay()]} • ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+  requestAnimationFrame(drawClock);
+}
+drawClock();
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playTick();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playTick(){
+  if(!audioCtx)return;
+  // Soft tick
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sine';o.frequency.value=800;
+  g.gain.setValueAtTime(.03,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.05);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.05);
+  // Ambient note every 4 seconds
+  const s=new Date().getSeconds();
+  if(s%4===0){
+    const notes=[261.63,329.63,392,440];
+    const f=notes[Math.floor(s/4)%notes.length];
+    const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+    o2.type='sine';o2.frequency.value=f;
+    g2.gain.setValueAtTime(0,audioCtx.currentTime);g2.gain.linearRampToValueAtTime(.03,audioCtx.currentTime+.2);g2.gain.linearRampToValueAtTime(0,audioCtx.currentTime+2);
+    o2.connect(g2);g2.connect(audioCtx.destination);o2.start();o2.stop(audioCtx.currentTime+2);
+  }
+  setTimeout(playTick,1000);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>

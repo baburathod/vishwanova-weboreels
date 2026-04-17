@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚀 Space Travel Simulator</title>
+<meta name="description" content="Experience hyperspace travel through the stars. Choose your destination and blast off!">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400&display=swap');
+body{font-family:'Inter',sans-serif;background:#000;overflow:hidden;color:#fff}
+canvas{display:block;position:fixed;top:0;left:0}
+.ui{position:fixed;z-index:10}
+.title-screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);transition:opacity 1s}
+.title-screen h1{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,4rem);font-weight:900;background:linear-gradient(135deg,#06b6d4,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}
+.title-screen .sub{color:#555;letter-spacing:5px;text-transform:uppercase;font-size:.85rem;margin-bottom:2rem}
+.destinations{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;max-width:600px;margin-bottom:2rem;padding:0 1rem}
+.dest{padding:1rem 1.5rem;border-radius:16px;border:2px solid #333;background:rgba(0,0,0,0.5);cursor:pointer;transition:all .3s;text-align:center;min-width:150px;backdrop-filter:blur(5px)}
+.dest:hover{border-color:#06b6d4;transform:translateY(-3px)}
+.dest.selected{border-color:#a78bfa;background:rgba(167,139,250,0.1)}
+.dest-emoji{font-size:2rem;margin-bottom:.3rem}
+.dest-name{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;color:#06b6d4}
+.dest-dist{font-size:.75rem;color:#555;margin-top:.2rem}
+.launch-btn{padding:1rem 3rem;border-radius:16px;border:none;background:linear-gradient(135deg,#06b6d4,#a78bfa);color:#fff;font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:700;cursor:pointer;transition:all .3s;text-transform:uppercase;letter-spacing:3px}
+.launch-btn:hover{transform:translateY(-3px);box-shadow:0 8px 30px #06b6d455}
+.hud{position:fixed;top:1.5rem;left:1.5rem;z-index:10;display:none;flex-direction:column;gap:.5rem}
+.hud.show{display:flex}
+.hud-item{padding:.4rem .8rem;border-radius:8px;background:rgba(0,0,0,0.5);border:1px solid #333;font-family:'Orbitron',sans-serif;font-size:.75rem;color:#06b6d4;backdrop-filter:blur(5px)}
+.speed-display{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:10;font-family:'Orbitron',sans-serif;font-size:clamp(1rem,3vw,2rem);color:#06b6d4;display:none;text-align:center}
+.speed-display.show{display:block}
+.speed-val{font-size:clamp(2rem,5vw,4rem);font-weight:900}
+.music-toggle{position:fixed;top:1.5rem;right:1.5rem;z-index:100;background:rgba(0,0,0,0.5);border:2px solid #06b6d444;border-radius:50%;width:45px;height:45px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all .3s;backdrop-filter:blur(5px)}
+.music-toggle:hover{border-color:#06b6d4;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<canvas id="space"></canvas>
+<div class="title-screen" id="titleScreen">
+  <h1>SPACE TRAVEL</h1>
+  <div class="sub">Choose your destination</div>
+  <div class="destinations" id="dests"></div>
+  <button class="launch-btn" onclick="launch()">🚀 LAUNCH</button>
+</div>
+<div class="hud" id="hud">
+  <div class="hud-item">DESTINATION: <span id="destName">—</span></div>
+  <div class="hud-item">DISTANCE: <span id="distLeft">—</span></div>
+  <div class="hud-item">ETA: <span id="eta">—</span></div>
+</div>
+<div class="speed-display" id="speedDisplay">
+  <div class="speed-val" id="speedVal">0</div>
+  <div>LIGHT YEARS / SEC</div>
+</div>
+<div class="music-toggle" onclick="toggleMusic()">🔊</div>
+
+<script>
+const canvas=document.getElementById('space'),ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+const destinations=[
+  {name:"MARS",emoji:"🔴",dist:0.0000024,color:"#ef4444",desc:"225M km"},
+  {name:"JUPITER",emoji:"🟠",dist:0.0000083,color:"#f97316",desc:"778M km"},
+  {name:"SATURN",emoji:"🪐",dist:0.000015,color:"#fbbf24",desc:"1.4B km"},
+  {name:"PROXIMA B",emoji:"🌍",dist:4.24,color:"#22c55e",desc:"4.24 ly"},
+  {name:"KEPLER-22B",emoji:"🌊",dist:638,color:"#06b6d4",desc:"638 ly"},
+  {name:"ANDROMEDA",emoji:"🌌",dist:2537000,color:"#a78bfa",desc:"2.5M ly"},
+];
+
+let selectedDest=0;
+const destsDiv=document.getElementById('dests');
+destinations.forEach((d,i)=>{
+  const el=document.createElement('div');
+  el.className='dest'+(i===0?' selected':'');
+  el.innerHTML=`<div class="dest-emoji">${d.emoji}</div><div class="dest-name">${d.name}</div><div class="dest-dist">${d.desc}</div>`;
+  el.onclick=()=>{document.querySelectorAll('.dest').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedDest=i};
+  destsDiv.appendChild(el);
+});
+
+let stars=[];
+let speed=0,targetSpeed=0,travelling=false,progress=0;
+for(let i=0;i<600;i++) stars.push({x:Math.random()*W-W/2,y:Math.random()*H-H/2,z:Math.random()*2000});
+
+function launch(){
+  const d=destinations[selectedDest];
+  document.getElementById('titleScreen').style.opacity='0';
+  setTimeout(()=>{document.getElementById('titleScreen').style.display='none'},1000);
+  document.getElementById('hud').classList.add('show');
+  document.getElementById('speedDisplay').classList.add('show');
+  document.getElementById('destName').textContent=d.name;
+  travelling=true;
+  targetSpeed=50;progress=0;
+
+  // Acceleration phases
+  setTimeout(()=>targetSpeed=200,2000);
+  setTimeout(()=>targetSpeed=500,4000);
+  setTimeout(()=>targetSpeed=1000,6000);
+  // Deceleration
+  setTimeout(()=>targetSpeed=100,12000);
+  setTimeout(()=>targetSpeed=10,14000);
+  setTimeout(()=>{
+    targetSpeed=0;travelling=false;
+    // Show arrival
+    document.getElementById('distLeft').textContent='ARRIVED!';
+    document.getElementById('eta').textContent='0s';
+  },16000);
+}
+
+function drawStars(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+
+  speed+=(targetSpeed-speed)*0.05;
+  if(travelling)progress+=speed*0.001;
+
+  const cx=W/2,cy=H/2;
+
+  stars.forEach(s=>{
+    s.z-=speed;
+    if(s.z<=0){s.z=2000;s.x=Math.random()*W-W/2;s.y=Math.random()*H-H/2}
+
+    const sx=cx+(s.x/s.z)*500;
+    const sy=cy+(s.y/s.z)*500;
+    const size=Math.max(0,(1-s.z/2000)*3);
+    const stretch=Math.min(speed*0.3,50);
+
+    if(sx<0||sx>W||sy<0||sy>H)return;
+
+    // Motion blur / stretch
+    if(speed>5){
+      const prevZ=s.z+speed;
+      const px=cx+(s.x/prevZ)*500;
+      const py=cy+(s.y/prevZ)*500;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(sx,sy);
+      ctx.strokeStyle=`rgba(255,255,255,${Math.min(1,(1-s.z/2000)*0.8)})`;
+      ctx.lineWidth=size;ctx.stroke();
+    }
+
+    ctx.beginPath();ctx.arc(sx,sy,size,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${1-s.z/2000})`;ctx.fill();
+  });
+
+  // Update HUD
+  if(travelling){
+    const d=destinations[selectedDest];
+    const remaining=Math.max(0,d.dist*(1-progress/16));
+    document.getElementById('distLeft').textContent=remaining<0.001?remaining.toExponential(1):remaining.toFixed(2)+' ly';
+    document.getElementById('eta').textContent=Math.max(0,Math.round(16-progress))+'s';
+  }
+  document.getElementById('speedVal').textContent=Math.round(speed);
+
+  // Warp ring effect at high speed
+  if(speed>200){
+    ctx.beginPath();ctx.arc(W/2,H/2,speed*.5,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(167,139,250,${(speed-200)/1000})`;ctx.lineWidth=2;ctx.stroke();
+  }
+
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+let audioCtx,musicOn=false;
+function toggleMusic(){
+  const btn=document.querySelector('.music-toggle');
+  if(!musicOn){audioCtx=new(window.AudioContext||window.webkitAudioContext)();playEngine();musicOn=true;btn.textContent='🔊'}
+  else{audioCtx.close();audioCtx=null;musicOn=false;btn.textContent='🔇'}
+}
+function playEngine(){
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  // Deep engine hum
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sawtooth';o.frequency.value=40+speed*0.1;
+  g.gain.setValueAtTime(.02,now);g.gain.setValueAtTime(.02,now+2);
+  o.connect(g);g.connect(audioCtx.destination);o.start(now);o.stop(now+2);
+  // Melodic layer
+  [130.81,196,261.63].forEach((f,i)=>{
+    const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+    o2.type='sine';o2.frequency.value=f;
+    g2.gain.setValueAtTime(0,now+i*1.5);g2.gain.linearRampToValueAtTime(.03,now+i*1.5+.3);g2.gain.linearRampToValueAtTime(0,now+i*1.5+1.4);
+    o2.connect(g2);g2.connect(audioCtx.destination);o2.start(now+i*1.5);o2.stop(now+i*1.5+1.5);
+  });
+  setTimeout(playEngine,4500);
+}
+document.addEventListener('click',function s(){if(!musicOn)toggleMusic();document.removeEventListener('click',s)},{once:true});
+</script>
+</body>
+</html>
